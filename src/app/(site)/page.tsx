@@ -91,14 +91,19 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="relative mx-auto w-full max-w-[540px]">
-            <div className="absolute inset-[4%] rounded-full bg-red" aria-hidden />
-            <div className="relative px-[9%] py-[12%]">
-              <BingoCard className="-rotate-[7deg]" />
-            </div>
-            <p className="absolute -bottom-2 right-2 rotate-[-4deg] rounded-full bg-sun px-4 py-2 text-sm font-bold text-[#1b1b1b] shadow-lg sm:right-6">
-              Every card is different
-            </p>
+          <div className="relative mx-auto w-full max-w-[600px]">
+            <div
+              className="absolute right-[2%] top-1/2 aspect-square w-[78%] -translate-y-1/2 rounded-full bg-red"
+              aria-hidden
+            />
+            <Photo
+              src={IMAGES.heroComposite}
+              alt="A player celebrating next to a Bar Beats Bingo scorecard"
+              width={1254}
+              height={1024}
+              priority
+              className="relative w-full"
+            />
           </div>
         </div>
       </section>
@@ -142,14 +147,26 @@ export default function HomePage() {
 
       {/* What is it */}
       <section className="wrap mt-28">
-        <div className="mx-auto max-w-3xl border-t-4 border-red pt-12 text-center">
-          <h2 className="text-[clamp(2.3rem,5vw,3.6rem)]">What is Bar Beats Bingo?</h2>
-          <p className="mt-5 text-xl font-semibold text-red-bright">Bored of the same old fundraiser or event?</p>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-white/90">
-            Crank up the fun with BBB. Your crowd will be singing their hearts out, laughing and loosening their wallets,
-            all in the name of charity or the thrill of winning prizes. Easy to run, epic to play, and guaranteed to
-            turn your night into a legendary one.
-          </p>
+        <div className="grid items-center gap-12 border-t-4 border-red pt-14 lg:grid-cols-[1.1fr_1fr]">
+          <div>
+            <h2 className="text-[clamp(2.3rem,5vw,3.6rem)]">What is Bar Beats Bingo?</h2>
+            <p className="mt-5 text-xl font-semibold text-red-bright">Bored of the same old fundraiser or event?</p>
+            <p className="mt-4 max-w-xl text-lg text-white/90">
+              Crank up the fun with BBB. Your crowd will be singing their hearts out, laughing and loosening their
+              wallets, all in the name of charity or the thrill of winning prizes. Easy to run, epic to play, and
+              guaranteed to turn your night into a legendary one.
+            </p>
+            <p className="mt-4 max-w-xl text-lg text-white/90">
+              Every player gets a different scorecard of songs. Mark them off as the music videos play, and shout
+              BINGO! when you complete a line.
+            </p>
+          </div>
+          <div className="relative mx-auto w-full max-w-[460px]">
+            <BingoCard className="rotate-[4deg]" />
+            <p className="absolute -bottom-4 left-4 rotate-[-4deg] rounded-full bg-sun px-4 py-2 text-sm font-bold text-[#1b1b1b] shadow-lg">
+              Every card is different
+            </p>
+          </div>
         </div>
       </section>
 
@@ -207,13 +224,22 @@ export default function HomePage() {
             </Link>
           </div>
         </div>
-        <Photo
-          src={IMAGES.triviaHost}
-          alt="A game show host with a microphone: bingo versus trivia"
-          width={600}
-          height={700}
-          className="mx-auto w-full max-w-md"
-        />
+        <div className="relative mx-auto w-full max-w-[460px] overflow-hidden rounded-t-full bg-red pt-10">
+          <Photo
+            src={IMAGES.triviaHost}
+            alt="A game show host with a microphone"
+            width={800}
+            height={879}
+            className="relative w-full"
+          />
+          <p aria-hidden className="display absolute right-[7%] top-[19%] text-right text-[clamp(2.4rem,7vw,3.6rem)] leading-[0.95]">
+            Bingo
+            <br />
+            vs
+            <br />
+            Trivia
+          </p>
+        </div>
       </section>
 
       {/* Testimonials */}
@@ -226,7 +252,7 @@ export default function HomePage() {
             <figure key={t.name} className="panel flex flex-col p-7">
               <blockquote className="flex-1 text-lg leading-relaxed text-white/90">“{t.quote}”</blockquote>
               <figcaption className="mt-6 flex items-center gap-4">
-                <Photo src={t.image} alt="" width={64} height={64} className="h-16 w-16 rounded-full object-cover" />
+                <Photo src={t.image} alt="" width={100} height={64} className="h-16 w-[100px] rounded-lg object-cover" />
                 <span>
                   <span className="block font-bold">{t.name}</span>
                   <span className="block text-sm text-mist">{t.role}</span>

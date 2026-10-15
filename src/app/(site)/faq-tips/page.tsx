@@ -142,7 +142,7 @@ export default function FaqPage() {
           alt=""
           width={520}
           height={520}
-          className="mx-auto hidden w-full max-w-md lg:sticky lg:top-8 lg:block"
+          className="mx-auto hidden w-full max-w-md rounded-full lg:sticky lg:top-8 lg:block"
         />
       </div>
 
