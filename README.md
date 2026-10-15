@@ -3,10 +3,10 @@
 The Bar Beats Bingo website and customer portal.
 
 - **Public website**: home, how it works, FAQ and tips, fundraising, host guides and a contact form. Same addresses as the old WordPress site, so existing links keep working.
-- **Customer portal** (`/portal`): customers log in and browse **Genre → Playlist → Files**, then preview or download videos, audio, scorecards and host sheets.
-- **Admin** (`/admin`): add customers, choose what each one can download (everything, whole genres, or single playlists), set an access end date, upload files, and read contact-form enquiries.
+- **Customer portal** (`/portal`): customers log in and go **Category → Show**, then download the show's three files (show file, scorecards, track list). The track list PDF is also shown right on the show page.
+- **Admin** (`/admin`): add customers, choose what each one can download (everything, whole categories, or single shows), set an access end date, paste each show's Zoho WorkDrive links, and read contact-form enquiries.
 
-Built with Next.js 16, Neon Postgres (via Drizzle ORM) and S3-compatible file storage (Cloudflare R2 recommended). Runs on Vercel.
+Built with Next.js 16 and Neon Postgres (via Drizzle ORM). Files are linked from Zoho WorkDrive; uploading to S3-compatible storage (e.g. Cloudflare R2) is also supported. Runs on Vercel.
 
 ---
 
@@ -22,9 +22,9 @@ Built with Next.js 16, Neon Postgres (via Drizzle ORM) and S3-compatible file st
 
 The site works at this point. Uploads and emails switch on with the next two steps.
 
-## 2. Set up file storage (Cloudflare R2)
+## 2. Set up file storage (optional)
 
-Neon stores the library's structure; the video files themselves live in R2. R2 doesn't charge for downloads, which matters for large video packs.
+Skip this if all your files come from Zoho WorkDrive links. It's only needed if you want to upload files directly in the admin area (under **More ways to add files**). Cloudflare R2 is recommended because it doesn't charge for downloads.
 
 1. In Cloudflare, go to **R2 → Create bucket**, e.g. `barbeatsbingo-library`. Keep it private.
 2. **R2 → Manage API tokens → Create API token** with **Object Read & Write** for that bucket. Copy the Access Key ID, Secret Access Key and the S3 endpoint (`https://<account-id>.r2.cloudflarestorage.com`).
@@ -54,7 +54,6 @@ Neon stores the library's structure; the video files themselves live in R2. R2 d
 
 Files upload straight from your browser to R2, so size isn't limited by Vercel. Anything over 100 MB goes up in parts automatically. Keep the page open until the upload bar finishes.
 
-**Not ready for R2 yet?** In any playlist, use **Add a link instead** with a Dropbox or Google Drive share link. Dropbox and Google Drive links are turned into direct downloads automatically.
 
 ## 3. Turn on emails (optional)
 
@@ -83,13 +82,21 @@ In Vercel, **Settings → Domains → Add** `barbeatsbingo.com` and `www.barbeat
 
 ## Using the admin area
 
-**Library → genre → Add a playlist**, then upload files on the playlist page. Use **Group** (e.g. `Round 1`, `Printables`) to put files under headings, and the **Order** number to sort them. New playlists start hidden so you can upload first; tick **Visible to customers** when it's ready.
+**Adding a show**
+
+1. **Library →** open the category **→ Add a show** (e.g. `Show 01`).
+2. In Zoho WorkDrive, open the show's folder. For each of the three files: right-click → **Share → External share link**, make sure **downloads are allowed**, and copy the link.
+3. Paste the three links into **Show files from Zoho**: the show file, the scorecards PDF and the track list PDF, then **Save show files**.
+4. When saving, each link is checked and the real file name is picked up from Zoho. If a link opens a Zoho page instead of the file (for example, you shared the folder rather than the file), you'll see a warning saying which one.
+5. Tick **Visible to customers** under Show settings when it's ready. New shows start hidden.
+
+Customers see three download buttons, and the track list PDF is drawn on the page so they can read it without downloading. Rename a file or change its order under **Files**.
 
 **Customers → Add a customer**, then choose what they can download:
 
 - **Everything**: includes anything added later.
-- **A whole genre**: includes playlists added to that genre later.
-- **Single playlists**: just those.
+- **A whole category**: includes shows added to that category later.
+- **Single shows**: just those.
 
 Set **Access ends** for subscriptions; after that date they can still log in but see a renewal message instead of files. Switch an account off to block logins without deleting it.
 
@@ -112,7 +119,7 @@ After changing `src/db/schema.ts`, run `npm run db:generate` to create a migrati
 | --- | --- |
 | `DATABASE_URL` | Everything (Neon) |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Creating the first admin |
-| `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Uploads and downloads of stored files |
+| `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Uploading files directly (optional) |
 | `RESEND_API_KEY`, `EMAIL_FROM`, `CONTACT_EMAIL` | Emails (optional) |
 | `APP_URL` | Links in emails (optional) |
 | `LEGACY_ASSET_ORIGIN` | Fallback address for photos not yet copied (optional) |
@@ -130,4 +137,4 @@ src/db/schema.ts     database tables
 scripts/migrate.mjs  runs before each build: migrations, starter genres, first admin
 ```
 
-Security notes: passwords are hashed with scrypt; sessions are random tokens stored hashed in the database; login is rate-limited per email; every page, action and download re-checks who is logged in and what they can access; download links are signed and expire after 15 minutes.
+Security notes: passwords are hashed with scrypt; sessions are random tokens stored hashed in the database; login is rate-limited per email; every page, action and download re-checks who is logged in and what they can access. Uploaded files use signed links that expire after 15 minutes. Zoho share links are public, so anyone a customer passes a link to can download that file; the portal controls who sees the links.

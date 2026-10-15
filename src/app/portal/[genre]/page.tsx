@@ -19,7 +19,7 @@ export default async function GenrePage({ params }: { params: Promise<{ genre: s
       {category.description && <p className="mt-2 max-w-2xl text-lg text-mist">{category.description}</p>}
 
       {playlists.length === 0 ? (
-        <p className="panel mt-10 p-8 text-mist">No playlists in this genre yet. Check back soon.</p>
+        <p className="panel mt-10 p-8 text-mist">No shows in this category yet. Check back soon.</p>
       ) : (
         <ul className="mt-10 grid gap-3">
           {playlists.map((p) => (

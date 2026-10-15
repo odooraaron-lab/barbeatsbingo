@@ -5,7 +5,7 @@ export default function PortalNotFound() {
     <div className="panel max-w-2xl p-8">
       <h1 className="text-3xl">That isn&apos;t in your library</h1>
       <p className="mt-3 text-mist">
-        The playlist may have been renamed or removed, or it isn&apos;t included in your account. If you think you
+        The show may have been renamed or removed, or it isn&apos;t included in your account. If you think you
         should have it, get in touch.
       </p>
       <div className="mt-6 flex flex-wrap gap-3">

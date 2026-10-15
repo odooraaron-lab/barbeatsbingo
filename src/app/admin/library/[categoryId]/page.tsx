@@ -11,7 +11,7 @@ import { ActionForm } from "@/components/admin/action-form";
 import { Breadcrumbs } from "@/components/portal/breadcrumbs";
 import { createPlaylist, deleteCategory, updateCategory } from "../actions";
 
-export const metadata: Metadata = { title: "Genre" };
+export const metadata: Metadata = { title: "Category" };
 
 export default async function CategoryAdminPage({ params }: { params: Promise<{ categoryId: string }> }) {
   await requireAdmin();
@@ -50,14 +50,14 @@ export default async function CategoryAdminPage({ params }: { params: Promise<{ 
       <div className="mt-8 grid items-start gap-6 lg:grid-cols-[1.6fr_1fr]">
         <div className="grid gap-6">
           <section className="panel overflow-x-auto">
-            <h2 className="px-6 pt-6 font-sans text-lg font-bold">Playlists</h2>
+            <h2 className="px-6 pt-6 font-sans text-lg font-bold">Shows</h2>
             {rows.length === 0 ? (
-              <p className="px-6 pb-6 pt-2 text-mist">No playlists yet. Add one to start uploading files.</p>
+              <p className="px-6 pb-6 pt-2 text-mist">No shows yet. Add one, then paste its Zoho links.</p>
             ) : (
               <table className="table mt-2">
                 <thead>
                   <tr>
-                    <th>Playlist</th>
+                    <th>Show</th>
                     <th>Files</th>
                     <th>Order</th>
                   </tr>
@@ -84,9 +84,9 @@ export default async function CategoryAdminPage({ params }: { params: Promise<{ 
           </section>
 
           <section className="panel p-6">
-            <h2 className="font-sans text-lg font-bold">Genre settings</h2>
+            <h2 className="font-sans text-lg font-bold">Category settings</h2>
             <div className="mt-4">
-              <ActionForm action={updateCategory.bind(null, category.id)} submitLabel="Save genre">
+              <ActionForm action={updateCategory.bind(null, category.id)} submitLabel="Save category">
                 <div className="grid gap-5 sm:grid-cols-2">
                   <div>
                     <label htmlFor="cat-name" className="label">
@@ -128,14 +128,14 @@ export default async function CategoryAdminPage({ params }: { params: Promise<{ 
 
         <div className="grid gap-6">
           <section className="panel p-6">
-            <h2 className="font-sans text-lg font-bold">Add a playlist</h2>
+            <h2 className="font-sans text-lg font-bold">Add a show</h2>
             <div className="mt-4">
-              <ActionForm action={createPlaylist.bind(null, category.id)} submitLabel="Add playlist" pendingLabel="Adding…">
+              <ActionForm action={createPlaylist.bind(null, category.id)} submitLabel="Add show" pendingLabel="Adding…">
                 <div>
                   <label htmlFor="pl-name" className="label">
                     Name
                   </label>
-                  <input id="pl-name" name="name" required className="field" placeholder="e.g. Week 42 Mix" />
+                  <input id="pl-name" name="name" required className="field" placeholder="e.g. Show 01" />
                 </div>
                 <div>
                   <label htmlFor="pl-description" className="label">
@@ -147,7 +147,7 @@ export default async function CategoryAdminPage({ params }: { params: Promise<{ 
                   <input type="checkbox" name="isPublished" />
                   <span>
                     <span className="block">Visible to customers straight away</span>
-                    <span className="block text-sm text-mist">Leave unticked to upload the files first.</span>
+                    <span className="block text-sm text-mist">Leave unticked to add the files first.</span>
                   </span>
                 </label>
               </ActionForm>
@@ -155,15 +155,15 @@ export default async function CategoryAdminPage({ params }: { params: Promise<{ 
           </section>
 
           <section className="rounded-[var(--radius-card)] border border-red/40 p-6">
-            <h2 className="font-sans text-lg font-bold">Delete genre</h2>
-            <p className="mt-1 text-sm text-mist">Only possible once it has no playlists.</p>
+            <h2 className="font-sans text-lg font-bold">Delete category</h2>
+            <p className="mt-1 text-sm text-mist">Only possible once it has no shows.</p>
             <div className="mt-4">
               <ActionForm
                 action={deleteCategory.bind(null, category.id)}
-                submitLabel="Delete genre"
+                submitLabel="Delete category"
                 pendingLabel="Deleting…"
                 submitClassName="btn btn-danger btn-sm"
-                confirm={`Delete the ${category.name} genre?`}
+                confirm={`Delete the ${category.name} category?`}
               >
                 {null}
               </ActionForm>

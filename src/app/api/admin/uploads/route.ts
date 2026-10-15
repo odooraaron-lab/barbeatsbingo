@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
   const data = parsed.data;
 
   const prefix = await prefixFor(data.playlistId);
-  if (!prefix) return NextResponse.json({ error: "That playlist no longer exists." }, { status: 404 });
+  if (!prefix) return NextResponse.json({ error: "That show no longer exists." }, { status: 404 });
 
   try {
     if (data.action === "start") {
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!data.key.startsWith(prefix)) {
-      return NextResponse.json({ error: "That file doesn't belong to this playlist." }, { status: 400 });
+      return NextResponse.json({ error: "That file doesn't belong to this show." }, { status: 400 });
     }
 
     if (data.action === "abort") {

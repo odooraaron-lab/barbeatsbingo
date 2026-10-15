@@ -34,19 +34,19 @@ export default async function LibraryPage() {
     <>
       <h1 className="text-[clamp(2.2rem,5vw,3rem)]">Library</h1>
       <p className="mt-2 max-w-2xl text-mist">
-        Genres hold playlists, and playlists hold the files customers download. Open a genre to add playlists.
+        Categories hold shows, and each show holds the files customers download. Open a category to add shows.
       </p>
 
       <div className="mt-8 grid items-start gap-6 lg:grid-cols-[1.6fr_1fr]">
         <div className="panel overflow-x-auto">
           {rows.length === 0 ? (
-            <p className="p-8 text-mist">No genres yet. Add your first one.</p>
+            <p className="p-8 text-mist">No categories yet. Add your first one.</p>
           ) : (
             <table className="table">
               <thead>
                 <tr>
-                  <th>Genre</th>
-                  <th>Playlists</th>
+                  <th>Category</th>
+                  <th>Shows</th>
                   <th>Files</th>
                   <th>Order</th>
                 </tr>
@@ -74,9 +74,9 @@ export default async function LibraryPage() {
         </div>
 
         <section className="panel p-6">
-          <h2 className="font-sans text-lg font-bold">Add a genre</h2>
+          <h2 className="font-sans text-lg font-bold">Add a category</h2>
           <div className="mt-4">
-            <ActionForm action={createCategory} submitLabel="Add genre" pendingLabel="Adding…" resetOnSuccess>
+            <ActionForm action={createCategory} submitLabel="Add category" pendingLabel="Adding…" resetOnSuccess>
               <div>
                 <label htmlFor="name" className="label">
                   Name

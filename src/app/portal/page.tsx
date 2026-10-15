@@ -20,13 +20,13 @@ export default async function PortalHomePage() {
       <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
           <h1 className="text-[clamp(2.2rem,5vw,3.2rem)]">{firstName ? `Kia ora, ${firstName}` : "Your library"}</h1>
-          <p className="mt-2 text-lg text-mist">Pick a genre to find your playlists and download the game files.</p>
+          <p className="mt-2 text-lg text-mist">Pick a category to find your shows and download the game files.</p>
         </div>
         <form action="/portal/search" role="search" className="flex w-full max-w-sm gap-2">
           <label htmlFor="q" className="sr-only">
-            Search playlists and files
+            Search shows and files
           </label>
-          <input id="q" name="q" type="search" placeholder="Search playlists and files" className="field" minLength={2} />
+          <input id="q" name="q" type="search" placeholder="Search shows and files" className="field" minLength={2} />
           <button type="submit" className="btn btn-ghost px-3" aria-label="Search">
             <Search size={18} aria-hidden />
           </button>
@@ -41,7 +41,7 @@ export default async function PortalHomePage() {
           <p className="mt-2 max-w-xl text-mist">
             {accessHasExpired(user)
               ? "Contact us to renew and your library will be back straight away."
-              : "We haven't added any playlists to your account yet. If you were expecting some, let us know."}
+              : "We haven't added any shows to your account yet. If you were expecting some, let us know."}
           </p>
           <Link href="/contact-us" className="btn btn-red mt-6">
             Contact us
@@ -61,7 +61,7 @@ export default async function PortalHomePage() {
                 </span>
                 {g.description && <span className="mt-3 line-clamp-2 text-[0.97rem] opacity-85">{g.description}</span>}
                 <span className="mt-auto pt-6 text-sm font-bold">
-                  {g.playlistCount === 1 ? "1 playlist" : `${g.playlistCount} playlists`}
+                  {g.playlistCount === 1 ? "1 show" : `${g.playlistCount} shows`}
                 </span>
               </Link>
             </li>

@@ -38,13 +38,18 @@ export function ActionForm({
       onSubmit={confirm ? (e) => !window.confirm(confirm) && e.preventDefault() : undefined}
     >
       {state.error && (
-        <p className="alert alert-error" role="alert">
+        <p className="alert alert-error whitespace-pre-line" role="alert">
           {state.error}
         </p>
       )}
       {state.ok && (
         <p className="alert alert-ok" role="status">
           {state.ok}
+        </p>
+      )}
+      {state.warning && (
+        <p className="alert alert-info whitespace-pre-line" role="status">
+          {state.warning}
         </p>
       )}
       {children}

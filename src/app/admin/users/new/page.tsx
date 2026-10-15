@@ -17,7 +17,7 @@ export default async function NewUserPage() {
     <>
       <Breadcrumbs items={[{ label: "Customers", href: "/admin/users" }, { label: "Add a customer" }]} />
       <h1 className="mt-4 text-[clamp(2.2rem,5vw,3rem)]">Add a customer</h1>
-      <p className="mt-2 text-mist">You&apos;ll choose which genres and playlists they can see on the next screen.</p>
+      <p className="mt-2 text-mist">You&apos;ll choose which categories and shows they can see on the next screen.</p>
 
       <div className="panel mt-8 max-w-3xl p-6 sm:p-8">
         <ActionForm action={createUser} submitLabel="Create customer" pendingLabel="Creating…">

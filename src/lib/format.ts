@@ -61,7 +61,7 @@ export const FILE_KINDS: { value: FileKind; label: string }[] = [
   { value: "video", label: "Video" },
   { value: "audio", label: "Audio" },
   { value: "scorecards", label: "Scorecards" },
-  { value: "host_sheet", label: "Host sheet" },
+  { value: "host_sheet", label: "Track list" },
   { value: "document", label: "Document" },
   { value: "archive", label: "Zip / archive" },
   { value: "other", label: "Other" },
@@ -104,8 +104,38 @@ export function directDownloadUrl(url: string) {
       const id = match?.[1] ?? u.searchParams.get("id");
       if (id) return `https://drive.google.com/uc?export=download&id=${id}`;
     }
+    if (isZohoPublicHost(u.hostname)) {
+      // Public share link: https://workdrive.zohopublic.com.au/external/<id>
+      const share = u.pathname.match(/^\/external\/([^/]+)/);
+      if (share) {
+        const direct = new URL(`${u.origin}/external/${share[1]}/download`);
+        direct.searchParams.set("directDownload", "true");
+        return direct.toString();
+      }
+      u.searchParams.set("directDownload", "true");
+      return u.toString();
+    }
     return url;
   } catch {
     return url;
   }
+}
+
+function isZohoPublicHost(host: string) {
+  return /(^|\.)zohopublic\.[a-z.]+$/.test(host) || /(^|\.)zohoexternal\.[a-z.]+$/.test(host);
+}
+
+/** Explains why a pasted link won't work for customers, or returns null if it looks fine. */
+export function linkProblem(url: string): string | null {
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return "Paste the full link, starting with https://";
+  }
+  if (u.protocol !== "https:" && u.protocol !== "http:") return "Paste the full link, starting with https://";
+  if (/^workdrive\.zoho\.[a-z.]+$/.test(u.hostname)) {
+    return "That's a private WorkDrive link that only you can open. In WorkDrive, right-click the file, choose Share → External share link, allow downloads, and paste that link instead.";
+  }
+  return null;
 }

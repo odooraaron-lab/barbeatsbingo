@@ -42,3 +42,6 @@ next-env.d.ts
 
 # keep the example env file
 !.env.example
+
+# copied from node_modules on dev/build
+/public/pdfjs

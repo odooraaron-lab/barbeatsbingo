@@ -20,9 +20,9 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       <Breadcrumbs items={[{ label: "Library", href: "/portal" }, { label: "Search" }]} />
       <form action="/portal/search" role="search" className="mt-5 flex max-w-xl gap-2">
         <label htmlFor="q" className="sr-only">
-          Search playlists and files
+          Search shows and files
         </label>
-        <input id="q" name="q" type="search" defaultValue={q} className="field" placeholder="Search playlists and files" />
+        <input id="q" name="q" type="search" defaultValue={q} className="field" placeholder="Search shows and files" />
         <button type="submit" className="btn btn-red">
           Search
         </button>
@@ -36,7 +36,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         <div className="mt-10 grid gap-12 lg:grid-cols-2">
           {results.playlists.length > 0 && (
             <section>
-              <h2 className="font-sans text-lg font-bold text-sun">Playlists</h2>
+              <h2 className="font-sans text-lg font-bold text-sun">Shows</h2>
               <ul className="panel mt-3 divide-y divide-line">
                 {results.playlists.map((p) => (
                   <li key={`${p.categorySlug}/${p.slug}`}>

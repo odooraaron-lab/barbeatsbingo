@@ -32,16 +32,16 @@ export function AccessEditor({
         <input type="checkbox" name="accessAll" checked={all} onChange={(e) => setAll(e.target.checked)} />
         <span>
           <span className="block font-semibold">Everything in the library</span>
-          <span className="block text-sm text-mist">Includes genres and playlists you add later.</span>
+          <span className="block text-sm text-mist">Includes categories and shows you add later.</span>
         </span>
       </label>
 
       {!all && (
         <>
           <p className="text-sm text-mist">
-            Or choose genres (includes every playlist in them, now and later) or individual playlists.
+            Or choose categories (includes every show in them, now and later) or individual shows.
           </p>
-          {genres.length === 0 && <p className="text-mist">Add some genres to the library first.</p>}
+          {genres.length === 0 && <p className="text-mist">Add some categories to the library first.</p>}
           <ul className="grid gap-2">
             {genres.map((g) => {
               const whole = cats.has(g.id);
@@ -57,13 +57,13 @@ export function AccessEditor({
                         checked={whole}
                         onChange={(e) => setCats((s) => toggle(s, g.id, e.target.checked))}
                         onClick={(e) => e.stopPropagation()}
-                        aria-label={`Whole genre: ${g.name}`}
+                        aria-label={`Whole category: ${g.name}`}
                         className="h-5 w-5 accent-[var(--color-red)]"
                       />
                       <span className="font-semibold">{g.name}</span>
                       {!g.isPublished && <span className="tag">Hidden</span>}
                       <span className="ml-auto text-sm text-mist">
-                        {whole ? "Whole genre" : picked ? `${picked} of ${g.playlists.length} playlists` : `${g.playlists.length} playlists`}
+                        {whole ? "Whole category" : picked ? `${picked} of ${g.playlists.length} shows` : `${g.playlists.length} shows`}
                       </span>
                     </summary>
                     {g.playlists.length > 0 && (

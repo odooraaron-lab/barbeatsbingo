@@ -91,7 +91,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                           ? "Everything"
                           : u.genres + u.playlists === 0
                             ? "Nothing yet"
-                            : [u.genres && `${u.genres} genre${u.genres > 1 ? "s" : ""}`, u.playlists && `${u.playlists} playlist${u.playlists > 1 ? "s" : ""}`]
+                            : [u.genres && `${u.genres} ${u.genres > 1 ? "categories" : "category"}`, u.playlists && `${u.playlists} show${u.playlists > 1 ? "s" : ""}`]
                                 .filter(Boolean)
                                 .join(", ")}
                     </td>

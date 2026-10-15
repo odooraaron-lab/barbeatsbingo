@@ -38,8 +38,8 @@ export default async function AdminHomePage() {
 
   const stats = [
     { label: "Customers", value: customers.n, href: "/admin/users" },
-    { label: "Genres", value: genres.n, href: "/admin/library" },
-    { label: "Playlists", value: lists.n, href: "/admin/library" },
+    { label: "Categories", value: genres.n, href: "/admin/library" },
+    { label: "Shows", value: lists.n, href: "/admin/library" },
     { label: "Files", value: fileStats.n, sub: formatBytes(fileStats.bytes) || undefined, href: "/admin/library" },
     { label: "New enquiries", value: openEnquiries.n, href: "/admin/enquiries" },
   ];
