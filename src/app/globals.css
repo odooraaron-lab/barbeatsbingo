@@ -1,0 +1,320 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #141818;
+  --color-coal: #1d2222;
+  --color-coal-2: #262d2d;
+  --color-line: #343c3c;
+  --color-red: #d42f3c;
+  --color-red-deep: #b5232f;
+  --color-red-bright: #ff5d68;
+  --color-sun: #f5c33b;
+  --color-tang: #f49a2a;
+  --color-paper: #ffffff;
+  --color-mist: #b5bebd;
+  --color-fog: #8a9493;
+  --color-ok: #3ccf8e;
+
+  --font-display: "Archivo Black", "Arial Black", Impact, sans-serif;
+  --font-sans: "Archivo Variable", Archivo, Arial, Helvetica, sans-serif;
+
+  --radius-card: 18px;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-ink);
+    background-image: radial-gradient(rgb(255 255 255 / 0.075) 1px, transparent 1.3px);
+    background-size: 22px 22px;
+    color: var(--color-paper);
+    font-family: var(--font-sans);
+    font-size: 17px;
+    line-height: 1.6;
+    min-height: 100dvh;
+  }
+
+  h1,
+  h2,
+  h3,
+  .display {
+    font-family: var(--font-display);
+    font-weight: 400;
+    line-height: 1.05;
+    letter-spacing: 0.005em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-sun);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--color-red);
+    color: white;
+  }
+}
+
+@layer components {
+  .wrap {
+    width: 100%;
+    max-width: 1180px;
+    margin-inline: auto;
+    padding-inline: 20px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 46px;
+    padding: 0.6rem 1.35rem;
+    border-radius: 6px;
+    font-weight: 650;
+    font-size: 0.98rem;
+    line-height: 1.2;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+    white-space: nowrap;
+  }
+  .btn:active {
+    transform: translateY(1px);
+  }
+  .btn:disabled,
+  .btn[aria-disabled="true"] {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .btn-red {
+    background: var(--color-red);
+    color: white;
+  }
+  .btn-red:hover {
+    background: var(--color-red-deep);
+  }
+  .btn-sun {
+    background: var(--color-sun);
+    color: #1b1b1b;
+  }
+  .btn-sun:hover {
+    background: #e6b22a;
+  }
+  .btn-ghost {
+    border: 1.5px solid rgb(255 255 255 / 0.35);
+    color: white;
+  }
+  .btn-ghost:hover {
+    border-color: white;
+    background: rgb(255 255 255 / 0.06);
+  }
+  .btn-quiet {
+    color: var(--color-mist);
+    min-height: 38px;
+    padding: 0.4rem 0.8rem;
+  }
+  .btn-quiet:hover {
+    color: white;
+    background: rgb(255 255 255 / 0.06);
+  }
+  .btn-sm {
+    min-height: 36px;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.9rem;
+  }
+  .btn-danger {
+    border: 1.5px solid rgb(255 93 104 / 0.5);
+    color: var(--color-red-bright);
+  }
+  .btn-danger:hover {
+    background: rgb(212 47 60 / 0.15);
+  }
+
+  .panel {
+    background: var(--color-coal);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+  }
+
+  .label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+    color: #e6eaea;
+  }
+  .hint {
+    font-size: 0.85rem;
+    color: var(--color-fog);
+    margin-top: 0.3rem;
+  }
+  .field {
+    width: 100%;
+    min-height: 46px;
+    padding: 0.6rem 0.8rem;
+    border-radius: 8px;
+    background: #0f1212;
+    border: 1.5px solid var(--color-line);
+    color: white;
+    font: inherit;
+    font-size: 1rem;
+  }
+  .field::placeholder {
+    color: #6b7574;
+  }
+  .field:focus {
+    outline: none;
+    border-color: var(--color-sun);
+  }
+  textarea.field {
+    min-height: 140px;
+    resize: vertical;
+  }
+  select.field {
+    appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, #b5bebd 50%),
+      linear-gradient(135deg, #b5bebd 50%, transparent 50%);
+    background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%;
+    background-size: 5px 5px;
+    background-repeat: no-repeat;
+    padding-right: 2.2rem;
+  }
+
+  .check {
+    display: flex;
+    gap: 0.6rem;
+    align-items: flex-start;
+    cursor: pointer;
+  }
+  .check input {
+    width: 20px;
+    height: 20px;
+    margin-top: 3px;
+    accent-color: var(--color-red);
+    flex: none;
+  }
+
+  .alert {
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+  }
+  .alert-error {
+    background: rgb(212 47 60 / 0.14);
+    border: 1px solid rgb(255 93 104 / 0.45);
+    color: #ffd5d8;
+  }
+  .alert-ok {
+    background: rgb(60 207 142 / 0.12);
+    border: 1px solid rgb(60 207 142 / 0.4);
+    color: #c9f5e0;
+  }
+  .alert-info {
+    background: rgb(245 195 59 / 0.1);
+    border: 1px solid rgb(245 195 59 / 0.35);
+    color: #fbe9b5;
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.1rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 650;
+    background: rgb(255 255 255 / 0.08);
+    color: var(--color-mist);
+  }
+
+  /* Long-form content on guide pages */
+  .copy {
+    max-width: 68ch;
+    color: #dfe4e4;
+  }
+  .copy p + p {
+    margin-top: 1rem;
+  }
+  .copy strong {
+    color: white;
+  }
+  .copy ul {
+    list-style: disc;
+    padding-left: 1.3rem;
+    margin-top: 0.75rem;
+  }
+  .copy li + li {
+    margin-top: 0.35rem;
+  }
+  .copy a {
+    color: var(--color-sun);
+    text-underline-offset: 3px;
+  }
+
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+  .table th {
+    text-align: left;
+    font-weight: 600;
+    color: var(--color-fog);
+    font-size: 0.82rem;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--color-line);
+    white-space: nowrap;
+  }
+  .table td {
+    padding: 0.7rem 0.75rem;
+    border-bottom: 1px solid rgb(52 60 60 / 0.6);
+    vertical-align: middle;
+  }
+  .table tr:last-child td {
+    border-bottom: 0;
+  }
+}
+
+/* Bingo card daub: the one animated moment on the home page */
+@keyframes daub {
+  0% {
+    transform: scale(0.2) rotate(-20deg);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.12) rotate(4deg);
+    opacity: 0.92;
+  }
+  100% {
+    transform: scale(1) rotate(0);
+    opacity: 0.88;
+  }
+}
+.daub {
+  animation: daub 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
