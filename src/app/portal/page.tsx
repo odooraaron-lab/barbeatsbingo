@@ -1,72 +1,70 @@
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { ChevronRight, Search } from "lucide-react";
 import { requireUser, accessHasExpired } from "@/lib/auth";
 import { listGenres } from "@/lib/library";
 
-const TILE_TONES = [
-  "bg-red text-white",
-  "bg-sun text-[#1b1b1b]",
-  "bg-coal-2 text-white border border-line",
-  "bg-tang text-[#1b1b1b]",
-];
-
 export default async function PortalHomePage() {
   const user = await requireUser();
-  const genres = await listGenres(user);
-  const firstName = user.name.split(" ")[0];
+  // Only categories that actually have shows; empty ones just add noise.
+  const categories = (await listGenres(user)).filter((c) => c.playlistCount > 0);
+  const firstName = user.name.trim().split(/\s+/)[0];
+  const expired = accessHasExpired(user);
 
   return (
     <>
-      <div className="flex flex-wrap items-end justify-between gap-6">
-        <div>
-          <h1 className="text-[clamp(2.2rem,5vw,3.2rem)]">{firstName ? `Kia ora, ${firstName}` : "Your library"}</h1>
-          <p className="mt-2 text-lg text-mist">Pick a category to find your shows and download the game files.</p>
-        </div>
-        <form action="/portal/search" role="search" className="flex w-full max-w-sm gap-2">
-          <label htmlFor="q" className="sr-only">
-            Search shows and files
-          </label>
-          <input id="q" name="q" type="search" placeholder="Search shows and files" className="field" minLength={2} />
-          <button type="submit" className="btn btn-ghost px-3" aria-label="Search">
-            <Search size={18} aria-hidden />
-          </button>
-        </form>
-      </div>
+      <h1 className="text-[clamp(2.2rem,5vw,3.2rem)]">{firstName ? `Welcome, ${firstName}` : "Your library"}</h1>
+      <p className="mt-2 text-lg text-mist">Choose a category to see its shows.</p>
 
-      {genres.length === 0 ? (
-        <div className="panel mt-10 p-8">
-          <h2 className="text-2xl">
-            {accessHasExpired(user) ? "Your access has ended" : "Nothing here yet"}
-          </h2>
-          <p className="mt-2 max-w-xl text-mist">
-            {accessHasExpired(user)
+      <form action="/portal/search" role="search" className="mt-6 flex max-w-md gap-2">
+        <label htmlFor="q" className="sr-only">
+          Search shows and files
+        </label>
+        <input id="q" name="q" type="search" placeholder="Search shows and files" className="field" minLength={2} />
+        <button type="submit" className="btn btn-ghost px-3" aria-label="Search">
+          <Search size={18} aria-hidden />
+        </button>
+      </form>
+
+      {categories.length === 0 ? (
+        <div className="panel mt-10 max-w-2xl p-8">
+          <h2 className="text-2xl">{expired ? "Your access has ended" : "No shows yet"}</h2>
+          <p className="mt-2 text-mist">
+            {expired
               ? "Contact us to renew and your library will be back straight away."
-              : "We haven't added any shows to your account yet. If you were expecting some, let us know."}
+              : "There aren't any shows on your account yet. If you were expecting some, let us know."}
           </p>
           <Link href="/contact-us" className="btn btn-red mt-6">
             Contact us
           </Link>
         </div>
       ) : (
-        <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {genres.map((g, i) => (
-            <li key={g.id}>
-              <Link
-                href={`/portal/${g.slug}`}
-                className={`group flex h-full min-h-44 flex-col rounded-[var(--radius-card)] p-6 transition-transform hover:-translate-y-0.5 ${TILE_TONES[i % TILE_TONES.length]}`}
-              >
-                <span className="flex items-start justify-between gap-3">
-                  <span className="display text-[1.9rem] leading-none">{g.name}</span>
-                  {!g.isPublished && <span className="tag bg-black/30 text-white">Hidden</span>}
-                </span>
-                {g.description && <span className="mt-3 line-clamp-2 text-[0.97rem] opacity-85">{g.description}</span>}
-                <span className="mt-auto pt-6 text-sm font-bold">
-                  {g.playlistCount === 1 ? "1 show" : `${g.playlistCount} shows`}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <section aria-labelledby="categories-heading" className="mt-12">
+          <h2 id="categories-heading" className="font-sans text-lg font-bold text-sun">
+            Categories
+          </h2>
+          <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {categories.map((c) => (
+              <li key={c.id} className="min-w-0">
+                <Link
+                  href={`/portal/${c.slug}`}
+                  className="group panel flex h-full items-center gap-4 border-l-4 !border-l-red p-5 transition-colors hover:border-white/30 hover:bg-coal-2"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="display text-[1.55rem] leading-tight">{c.name}</span>
+                      {!c.isPublished && <span className="tag">Hidden</span>}
+                    </span>
+                    {c.description && <span className="mt-1 line-clamp-2 text-sm text-mist">{c.description}</span>}
+                    <span className="mt-3 inline-block rounded-full bg-white/10 px-2.5 py-0.5 text-sm font-semibold">
+                      {c.playlistCount === 1 ? "1 show" : `${c.playlistCount} shows`}
+                    </span>
+                  </span>
+                  <ChevronRight size={22} aria-hidden className="shrink-0 text-fog transition-colors group-hover:text-white" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
     </>
   );

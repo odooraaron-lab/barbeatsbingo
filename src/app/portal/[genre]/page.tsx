@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ChevronRight } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { getGenre } from "@/lib/library";
 import { formatBytes, formatDate } from "@/lib/format";
@@ -26,7 +27,7 @@ export default async function GenrePage({ params }: { params: Promise<{ genre: s
             <li key={p.id}>
               <Link
                 href={`/portal/${category.slug}/${p.slug}`}
-                className="panel flex flex-wrap items-center gap-x-6 gap-y-2 px-6 py-5 transition-colors hover:border-white/30 hover:bg-coal-2"
+                className="group panel flex items-center gap-4 px-5 py-4 transition-colors hover:border-white/30 hover:bg-coal-2 sm:px-6 sm:py-5"
               >
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-3">
@@ -34,12 +35,18 @@ export default async function GenrePage({ params }: { params: Promise<{ genre: s
                     {!p.isPublished && <span className="tag">Hidden</span>}
                   </span>
                   {p.description && <span className="mt-1 block truncate text-mist">{p.description}</span>}
+                  <span className="mt-1 block text-sm text-mist sm:hidden">
+                    {p.fileCount === 1 ? "1 file" : `${p.fileCount} files`}
+                  </span>
                 </span>
-                <span className="text-sm text-mist">
+                <span className="hidden shrink-0 text-right text-sm text-mist sm:block">
                   {p.fileCount === 1 ? "1 file" : `${p.fileCount} files`}
                   {p.totalBytes > 0 && ` · ${formatBytes(p.totalBytes)}`}
-                  {p.updatedAt && ` · updated ${formatDate(p.updatedAt)}`}
+                  {p.updatedAt && (
+                    <span className="block text-xs text-fog">Updated {formatDate(p.updatedAt)}</span>
+                  )}
                 </span>
+                <ChevronRight size={22} aria-hidden className="shrink-0 text-fog transition-colors group-hover:text-white" />
               </Link>
             </li>
           ))}

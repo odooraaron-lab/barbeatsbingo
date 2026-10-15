@@ -50,7 +50,7 @@ function endOfNzDay(value: FormDataEntryValue | null): Date | null | "invalid" {
 
 function welcomeEmail(name: string, link: string) {
   return [
-    `Kia ora ${name || "there"},`,
+    `Hi ${name || "there"},`,
     "",
     "Your Bar Beats Bingo customer account is ready. Choose a password using the link below, then you can log in any time to download your games, scorecards and host sheets.",
     "",
