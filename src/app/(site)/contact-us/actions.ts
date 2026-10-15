@@ -31,33 +31,39 @@ export async function sendEnquiry(_prev: ContactState, formData: FormData): Prom
   }
   const data = parsed.data;
 
+  let saved = false;
   try {
     await db.insert(enquiries).values(data);
+    saved = true;
   } catch (err) {
     console.error("[contact] could not save enquiry", err);
+  }
+
+  const to = process.env.CONTACT_EMAIL;
+  const emailed = to
+    ? await sendEmail({
+        to,
+        replyTo: data.email,
+        subject: `New enquiry from ${data.name || data.email}`,
+        text: [
+          "New enquiry from the Bar Beats Bingo website.",
+          "",
+          `Name: ${data.name || "-"}`,
+          `Email: ${data.email}`,
+          `Phone: ${data.phone || "-"}`,
+          "",
+          data.message || "(no message)",
+        ].join("\n"),
+      })
+    : false;
+
+  // As long as it reached us one way or the other, the visitor is done.
+  if (!saved && !emailed) {
     return {
       status: "error",
       message: "Your message couldn't be sent just now. Please try again in a minute.",
       fields: raw,
     };
-  }
-
-  const to = process.env.CONTACT_EMAIL;
-  if (to) {
-    await sendEmail({
-      to,
-      replyTo: data.email,
-      subject: `New enquiry from ${data.name || data.email}`,
-      text: [
-        "New enquiry from the Bar Beats Bingo website.",
-        "",
-        `Name: ${data.name || "-"}`,
-        `Email: ${data.email}`,
-        `Phone: ${data.phone || "-"}`,
-        "",
-        data.message || "(no message)",
-      ].join("\n"),
-    });
   }
 
   return { status: "sent" };

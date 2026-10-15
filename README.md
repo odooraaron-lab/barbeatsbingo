@@ -102,6 +102,12 @@ Set **Access ends** for subscriptions; after that date they can still log in but
 
 Customer downloads are logged and shown on the overview and each customer's page.
 
+## Troubleshooting
+
+**Contact form says "couldn't be sent", or logging in fails.** The site can't reach the database. In Vercel, open **Storage → your Neon database → Connect Project**, make sure this project is connected for **Production** (and Preview), then **Deployments → Redeploy**. The app accepts `DATABASE_URL` or a prefixed name such as `STORAGE_DATABASE_URL`. A deploy without a database now stops with this same message in the build log, and the previous version stays live.
+
+**Changed an environment variable?** Vercel only picks it up after a redeploy.
+
 ## Local development
 
 ```bash

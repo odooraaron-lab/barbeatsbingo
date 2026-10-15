@@ -3,13 +3,15 @@
 //   2. adds the starter genres if the library is empty
 //   3. creates the first admin from ADMIN_EMAIL / ADMIN_PASSWORD if that user doesn't exist yet
 //
-// Safe to run repeatedly. Skips everything when DATABASE_URL isn't set.
+// Safe to run repeatedly. Locally it skips everything when no database is set;
+// on Vercel it stops the build, because the site can't work without one.
 
 import { randomBytes, scrypt as scryptCb } from "node:crypto";
 import { promisify } from "node:util";
 import pg from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { findDatabaseUrl } from "./database-url.mjs";
 
 const scrypt = promisify(scryptCb);
 
@@ -33,11 +35,21 @@ const STARTER_GENRES = [
   ["mixtapes", "Mixtapes", "Genre-hopping shows that mix decades into one game."],
 ];
 
-const url = process.env.DATABASE_URL;
-if (!url) {
-  console.warn("[migrate] DATABASE_URL is not set, skipping migrations.");
+const found = findDatabaseUrl();
+if (!found) {
+  const help =
+    "No database connection string found (DATABASE_URL).\n" +
+    "In Vercel: Storage → your Neon database → Connect Project → tick Production, Preview and Development.\n" +
+    "Then redeploy. The tables and your admin login are created automatically on that deploy.";
+  if (process.env.VERCEL === "1") {
+    console.error(`\n[migrate] ${help}\n`);
+    process.exit(1);
+  }
+  console.warn(`[migrate] ${help.split("\n")[0]} Skipping migrations.`);
   process.exit(0);
 }
+const url = found.url;
+console.log(`[migrate] using ${found.key}`);
 
 const pool = new pg.Pool({ connectionString: url, max: 1 });
 
