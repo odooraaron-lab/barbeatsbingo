@@ -7,6 +7,7 @@ import { findTrackList } from "@/lib/show-files";
 import { Breadcrumbs } from "@/components/portal/breadcrumbs";
 import { FileIcon } from "@/components/portal/file-icon";
 import { TrackListViewer } from "@/components/portal/track-list-viewer";
+import { AudioPlayer } from "@/components/portal/audio-player";
 
 function extensionOf(name: string) {
   const ext = name.split(".").pop();
@@ -20,6 +21,8 @@ export default async function ShowPage({ params }: { params: Promise<{ genre: st
   if (!data) notFound();
   const { category, playlist: show, files } = data;
   const trackList = findTrackList(files);
+  const showFile = files.find((f) => f.kind === "video" || f.kind === "audio") ?? null;
+  const player = showFile && <AudioPlayer src={`/api/files/${showFile.id}/stream`} title={showFile.title} />;
 
   return (
     <>
@@ -62,7 +65,13 @@ export default async function ShowPage({ params }: { params: Promise<{ genre: st
                       <span className="sr-only"> {f.title}</span>
                     </a>
                     {playable && (
-                      <a href={`${href}?inline=1`} target="_blank" rel="noreferrer" className="btn btn-ghost px-3" aria-label={`Preview ${f.title}`}>
+                      <a
+                        href={`${href}?inline=1`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn btn-ghost px-3"
+                        aria-label={`Preview ${f.title}`}
+                      >
                         <Play size={18} aria-hidden />
                       </a>
                     )}
@@ -74,24 +83,29 @@ export default async function ShowPage({ params }: { params: Promise<{ genre: st
         </section>
       )}
 
-      {trackList && (
-        <section aria-labelledby="tracklist-heading" className="mt-14 max-w-4xl">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <h2 id="tracklist-heading" className="text-[clamp(1.8rem,4vw,2.4rem)]">
-              Track list
-            </h2>
-            <a href={`/api/files/${trackList.id}/download`} className="btn btn-ghost btn-sm">
-              <Download size={16} aria-hidden /> Download PDF
-            </a>
-          </div>
-          <div className="mt-5">
-            <TrackListViewer
-              src={`/api/files/${trackList.id}/pdf`}
-              downloadHref={`/api/files/${trackList.id}/download`}
-              title={trackList.title}
-            />
-          </div>
-        </section>
+      {trackList ? (
+        <div className="mt-14 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <section aria-labelledby="tracklist-heading" className="min-w-0">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <h2 id="tracklist-heading" className="text-[clamp(1.8rem,4vw,2.4rem)]">
+                Track list
+              </h2>
+              <a href={`/api/files/${trackList.id}/download`} className="btn btn-ghost btn-sm">
+                <Download size={16} aria-hidden /> Download PDF
+              </a>
+            </div>
+            <div className="mt-5">
+              <TrackListViewer
+                src={`/api/files/${trackList.id}/pdf`}
+                downloadHref={`/api/files/${trackList.id}/download`}
+                title={trackList.title}
+              />
+            </div>
+          </section>
+          {player && <aside className="order-first lg:sticky lg:top-6 lg:order-none lg:mt-[4.25rem]">{player}</aside>}
+        </div>
+      ) : (
+        player && <div className="mt-10 max-w-md">{player}</div>
       )}
     </>
   );

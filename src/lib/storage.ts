@@ -112,12 +112,12 @@ export async function deleteObject(key: string) {
   await s3().send(new DeleteObjectCommand({ Bucket: bucket(), Key: key }));
 }
 
-export async function presignDownload(key: string, fileName: string, inline: boolean) {
+export async function presignDownload(key: string, fileName: string, inline: boolean, expiresIn = 15 * 60) {
   const ascii = fileName.replace(/[^\x20-\x7e]/g, "_").replace(/["\\]/g, "");
   const disposition = `${inline ? "inline" : "attachment"}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
   return getSignedUrl(
     s3(),
     new GetObjectCommand({ Bucket: bucket(), Key: key, ResponseContentDisposition: disposition }),
-    { expiresIn: 15 * 60 },
+    { expiresIn },
   );
 }
