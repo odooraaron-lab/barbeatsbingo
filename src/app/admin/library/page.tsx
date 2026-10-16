@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { FileSpreadsheet } from "lucide-react";
 import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { categories, files, playlists } from "@/db/schema";
@@ -32,10 +33,17 @@ export default async function LibraryPage() {
 
   return (
     <>
-      <h1 className="text-[clamp(2.2rem,5vw,3rem)]">Library</h1>
-      <p className="mt-2 max-w-2xl text-mist">
-        Categories hold shows, and each show holds the files customers download. Open a category to add shows.
-      </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-[clamp(2.2rem,5vw,3rem)]">Library</h1>
+          <p className="mt-2 max-w-2xl text-mist">
+            Categories hold shows, and each show holds the files customers download. Open a category to add shows.
+          </p>
+        </div>
+        <Link href="/admin/library/import" className="btn btn-ghost">
+          <FileSpreadsheet size={18} aria-hidden /> Import shows from a spreadsheet
+        </Link>
+      </div>
 
       <div className="mt-8 grid items-start gap-6 lg:grid-cols-[1.6fr_1fr]">
         <div className="panel overflow-x-auto">

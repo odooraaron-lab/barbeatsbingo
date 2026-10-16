@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Pause, Play, RotateCcw, Square, Volume2 } from "lucide-react";
+import { songAt } from "@/lib/call-list";
+import { useShowSession } from "./show-session";
 
 function formatTime(seconds: number) {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
@@ -44,6 +46,11 @@ export function AudioPlayer({
   const [lengthLater, setLengthLater] = useState(false);
   // True from pressing Play on an unloaded file until it's past the intro; it stays muted meanwhile.
   const startingRef = useRef(false);
+  // A jump asked for before the file had loaded (e.g. a song tapped on the call list).
+  const pendingSeekRef = useRef<number | null>(null);
+  const session = useShowSession();
+  const report = session?.report;
+  const registerPlayer = session?.registerPlayer;
 
   // Only skip when the file is clearly longer than the intro.
   const skipFor = (fileDuration: number | null | undefined) =>
@@ -55,6 +62,16 @@ export function AudioPlayer({
   useEffect(() => {
     const audio = audioRef.current;
     return () => audio?.pause();
+  }, []);
+
+  // The page's HTML starts loading the audio before the page's scripts are running, so on a
+  // fast connection its details can arrive before anything is listening. Replay that moment,
+  // otherwise the seek bar would stay switched off.
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.error) audio.dispatchEvent(new Event("error"));
+    else if (audio.readyState >= HTMLMediaElement.HAVE_METADATA) audio.dispatchEvent(new Event("loadedmetadata"));
   }, []);
 
   // Some phones don't read the length until Play is pressed; say so rather than "Getting the length…" forever.
@@ -125,6 +142,16 @@ export function AudioPlayer({
     setRawTime(target);
   };
 
+  /** `time` is seconds into the file (the call list's clock). Never lands inside the intro. */
+  const seekRaw = (time: number) => {
+    const audio = audioRef.current;
+    if (!audio || !Number.isFinite(time)) return;
+    const target = Math.max(time, skipFor(lengthOf(audio)));
+    if (audio.readyState >= HTMLMediaElement.HAVE_METADATA) audio.currentTime = target;
+    else pendingSeekRef.current = target;
+    setRawTime(target);
+  };
+
   const retry = () => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -138,6 +165,25 @@ export function AudioPlayer({
   const known = finite(duration);
   const progress = known ? Math.min(100, (time / duration) * 100) : 0;
   const canSeek = known && loaded;
+
+  // Let the call list move the player, and tell it where the show is up to.
+  const seekRawRef = useRef(seekRaw);
+  useEffect(() => {
+    seekRawRef.current = seekRaw;
+  });
+  useEffect(() => {
+    if (!registerPlayer) return;
+    registerPlayer({ seek: (t) => seekRawRef.current(t) });
+    return () => registerPlayer(null);
+  }, [registerPlayer]);
+  useEffect(() => {
+    report?.(rawTime, playing);
+  }, [report, rawTime, playing]);
+
+  const songs = session?.callList?.songs ?? null;
+  // Before the first song (e.g. while the file is still loading) it's about to be song 1.
+  const nowIndex = songs?.length ? Math.max(0, songAt(songs, rawTime)) : -1;
+  const now = songs && nowIndex >= 0 ? songs[nowIndex] : null;
 
   // Lock screen and headphone controls on phones.
   const latest = useRef({ toggle, stop, seek, time });
@@ -275,6 +321,19 @@ export function AudioPlayer({
               <Square size={16} aria-hidden /> Stop
             </button>
           </div>
+          {now && songs && (
+            <p className="mt-4 flex min-w-0 items-start gap-2 text-sm" aria-live="polite">
+              <span className="grid h-6 w-6 shrink-0 place-items-center rounded bg-white font-bold text-ink" aria-hidden>
+                {now.letter}
+              </span>
+              <span className="line-clamp-2 min-w-0 pt-0.5">
+                <span className="text-mist">
+                  {playing ? "Now playing" : "Song"} {now.n} of {songs.length}:
+                </span>{" "}
+                <span className="font-semibold">{now.title}</span>
+              </span>
+            </p>
+          )}
           <p className="mt-4 text-xs text-fog">Sound only. Download the file to play the video on your screens.</p>
         </>
       )}
@@ -290,7 +349,12 @@ export function AudioPlayer({
           if (finite(audio.duration)) setRawDuration(audio.duration);
           setLoaded(true);
           const s = skipFor(lengthOf(audio));
-          if (Math.abs(audio.currentTime - s) > 0.5 && (audio.paused || startingRef.current)) {
+          if (pendingSeekRef.current !== null) {
+            const target = Math.max(pendingSeekRef.current, s);
+            pendingSeekRef.current = null;
+            audio.currentTime = target;
+            setRawTime(target);
+          } else if (Math.abs(audio.currentTime - s) > 0.5 && (audio.paused || startingRef.current)) {
             audio.currentTime = s;
             setRawTime(s);
           }

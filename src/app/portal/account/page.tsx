@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import { Breadcrumbs } from "@/components/portal/breadcrumbs";
 import { PasswordForm } from "./password-form";
+import { InstallApp } from "@/components/portal/install-app";
 
 export const metadata: Metadata = { title: "Your account" };
 
@@ -53,6 +54,9 @@ export default async function AccountPage() {
             <PasswordForm email={user.email} />
           </div>
         </section>
+        <div className="lg:col-start-1">
+          <InstallApp variant="panel" />
+        </div>
       </div>
     </>
   );

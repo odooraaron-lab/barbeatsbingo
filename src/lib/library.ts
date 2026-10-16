@@ -34,18 +34,32 @@ function publishedOnly<T extends { isPublished: typeof categories.isPublished | 
   return isAdmin(user) ? undefined : eq(table.isPublished, true);
 }
 
+/**
+ * How a category looks to this customer:
+ * - open: has shows they can play (lit up)
+ * - locked: has shows, but none on their plan (greyed, with a lock)
+ * - soon: no shows yet
+ */
+export type CategoryState = "open" | "locked" | "soon";
+
 export type GenreSummary = {
   id: string;
   slug: string;
   name: string;
   description: string;
   isPublished: boolean;
-  playlistCount: number;
+  /** Shows this customer can open. */
+  available: number;
+  /** All shows in the category. */
+  total: number;
+  state: CategoryState;
 };
 
+const NO_ACCESS: Scope = { all: false, categoryIds: new Set(), playlistIds: new Set() };
+
+/** Every category, with what this customer can open in each. Expired accounts see everything locked. */
 export async function listGenres(user: SessionUser): Promise<GenreSummary[]> {
-  if (accessHasExpired(user)) return [];
-  const scope = await getScope(user);
+  const scope = accessHasExpired(user) ? NO_ACCESS : await getScope(user);
 
   const [cats, pls] = await Promise.all([
     db
@@ -59,18 +73,21 @@ export async function listGenres(user: SessionUser): Promise<GenreSummary[]> {
       .where(publishedOnly(user, playlists)),
   ]);
 
-  return cats
-    .map((c) => ({
+  return cats.map((c) => {
+    const inCategory = pls.filter((p) => p.categoryId === c.id);
+    const available = inCategory.filter((p) => canSeePlaylist(scope, p)).length;
+    const total = inCategory.length;
+    return {
       id: c.id,
       slug: c.slug,
       name: c.name,
       description: c.description,
       isPublished: c.isPublished,
-      playlistCount: pls.filter((p) => p.categoryId === c.id && canSeePlaylist(scope, p)).length,
-      whole: scope.all || scope.categoryIds.has(c.id),
-    }))
-    .filter((c) => c.whole || c.playlistCount > 0)
-    .map(({ whole: _whole, ...c }) => c);
+      available,
+      total,
+      state: available > 0 ? "open" : total > 0 ? "locked" : "soon",
+    };
+  });
 }
 
 export type PlaylistSummary = {
@@ -84,8 +101,11 @@ export type PlaylistSummary = {
   updatedAt: Date | null;
 };
 
+/**
+ * A category and the shows this customer can open in it. Returns the category even when
+ * none of its shows are on their plan, so the page can offer to add it.
+ */
 export async function getGenre(user: SessionUser, slug: string) {
-  if (accessHasExpired(user)) return null;
   const [category] = await db
     .select()
     .from(categories)
@@ -93,7 +113,8 @@ export async function getGenre(user: SessionUser, slug: string) {
     .limit(1);
   if (!category) return null;
 
-  const scope = await getScope(user);
+  const expired = accessHasExpired(user);
+  const scope = expired ? NO_ACCESS : await getScope(user);
   const rows = await db
     .select({
       id: playlists.id,
@@ -102,8 +123,8 @@ export async function getGenre(user: SessionUser, slug: string) {
       name: playlists.name,
       description: playlists.description,
       isPublished: playlists.isPublished,
-      fileCount: sql<number>`count(${files.id})::int`,
-      totalBytes: sql<number>`coalesce(sum(${files.sizeBytes}), 0)::float8`,
+      fileCount: sql<number>`count(${files.id}) filter (where ${files.kind} <> 'preview')::int`,
+      totalBytes: sql<number>`coalesce(sum(${files.sizeBytes}) filter (where ${files.kind} <> 'preview'), 0)::float8`,
       updatedAt: max(files.createdAt),
     })
     .from(playlists)
@@ -115,9 +136,9 @@ export async function getGenre(user: SessionUser, slug: string) {
   const visible: PlaylistSummary[] = rows
     .filter((p) => canSeePlaylist(scope, p))
     .map(({ categoryId: _c, ...p }) => p);
+  const lockedNames = rows.filter((p) => !canSeePlaylist(scope, p)).map((p) => p.name);
 
-  if (!scope.all && !scope.categoryIds.has(category.id) && visible.length === 0) return null;
-  return { category, playlists: visible };
+  return { category, playlists: visible, lockedNames, expired };
 }
 
 export async function getPlaylist(user: SessionUser, categorySlug: string, playlistSlug: string) {
@@ -150,6 +171,7 @@ export async function getPlaylist(user: SessionUser, categorySlug: string, playl
       fileName: files.fileName,
       sizeBytes: files.sizeBytes,
       durationSeconds: files.durationSeconds,
+      meta: files.meta,
       createdAt: files.createdAt,
     })
     .from(files)

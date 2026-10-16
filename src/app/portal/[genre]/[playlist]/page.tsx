@@ -8,6 +8,8 @@ import { Breadcrumbs } from "@/components/portal/breadcrumbs";
 import { FileIcon } from "@/components/portal/file-icon";
 import { TrackListViewer } from "@/components/portal/track-list-viewer";
 import { AudioPlayer } from "@/components/portal/audio-player";
+import { ShowSession } from "@/components/portal/show-session";
+import { ClaimChecker } from "@/components/portal/claim-checker";
 
 function extensionOf(name: string) {
   const ext = name.split(".").pop();
@@ -26,6 +28,8 @@ export default async function ShowPage({ params }: { params: Promise<{ genre: st
   // Prefer the small MP3 preview: it starts far faster than streaming the video.
   const playable = findPlayable(allFiles);
   const showFile = files.find((f) => f.kind === "video" || f.kind === "audio") ?? null;
+  const callList = trackList?.meta?.callList ?? null;
+  const cards = files.find((f) => f.kind === "scorecards")?.meta?.cards ?? null;
   const player = playable && (
     <AudioPlayer
       src={`/api/files/${playable.id}/stream`}
@@ -34,9 +38,17 @@ export default async function ShowPage({ params }: { params: Promise<{ genre: st
       knownDuration={playable.durationSeconds}
     />
   );
+  // The checker needs the songs; it shows once they're known (from the server or the PDF itself).
+  const side =
+    player || trackList ? (
+      <>
+        {player}
+        {trackList && <ClaimChecker isAdmin={user.role === "admin"} />}
+      </>
+    ) : null;
 
   return (
-    <>
+    <ShowSession callList={callList} cards={cards}>
       <Breadcrumbs
         items={[
           { label: "Library", href: "/portal" },
@@ -113,11 +125,11 @@ export default async function ShowPage({ params }: { params: Promise<{ genre: st
               />
             </div>
           </section>
-          {player && <aside className="order-first lg:sticky lg:top-6 lg:order-none lg:mt-[4.25rem]">{player}</aside>}
+          {side && <aside className="order-first lg:sticky lg:top-6 lg:order-none lg:mt-[4.25rem]">{side}</aside>}
         </div>
       ) : (
         player && <div className="mt-10 max-w-md">{player}</div>
       )}
-    </>
+    </ShowSession>
   );
 }

@@ -3,7 +3,9 @@
 The Bar Beats Bingo website and customer portal.
 
 - **Public website**: home, how it works, FAQ and tips, fundraising, host guides and a contact form. Same addresses as the old WordPress site, so existing links keep working.
-- **Customer portal** (`/portal`): customers log in and go **Category → Show**, then download the show's three files (show file, scorecards, track list). The track list PDF is also shown right on the show page, next to a player for the show's sound.
+- **Customer portal** (`/portal`): customers log in and go **Category → Show**, then download the show's three files (show file, scorecards, track list). The library shows every category: the ones they can play are lit up, the rest are greyed out (locked, with a one-tap "Ask to add", or "Coming soon" when empty).
+- **Show page**: the call list (track list PDF) is drawn on the page next to a player for the show's sound. The song that's playing lights up, tapping a song jumps there, and **Check a bingo** lists the songs played so far by letter (and checks card numbers once a show's cards are stored).
+- **Phone app**: customers can add the portal to their home screen and open it like an app.
 - **Admin** (`/admin`): add customers, choose what each one can download (everything, whole categories, or single shows), set an access end date, paste each show's Zoho WorkDrive links, and read contact-form enquiries.
 
 Built with Next.js 16 and Neon Postgres (via Drizzle ORM). Files are linked from Zoho WorkDrive; uploading to S3-compatible storage (e.g. Cloudflare R2) is also supported. Runs on Vercel.
@@ -92,6 +94,12 @@ In Vercel, **Settings → Domains → Add** `barbeatsbingo.com` and `www.barbeat
 
 Customers see three download buttons, and the track list PDF is drawn on the page so they can read it without downloading. Rename a file or change its order under **Files**.
 
+After saving, the track list box says how many songs were read from the call list (e.g. "75 songs read"). That's what lets the call list follow the player: it needs the call list PDF with the letter, number, time and "Artist - Title" on each line.
+
+**Importing lots of shows at once**
+
+**Library → Import shows from a spreadsheet**. Download the template, fill in one row per show (category, show name, and the four Zoho links; description and visible are optional), then save it as CSV and choose the file, or copy the rows out of Excel or Google Sheets and paste them in. The page shows what will be added or updated and flags rows with problems before you import. Shows that already exist (same name in the same category) get their links updated; blank cells leave what's there alone. New categories can be created on the way.
+
 **MP3s for the player (makes it start fast and work on phones)**
 
 The player on each show page can play straight from the show video, but that means streaming the whole video (around 670 MB) just to hear it, so it's slow to start and to skip around. A small MP3 of the show is about 30 times smaller (roughly 1 MB per minute).
@@ -118,6 +126,8 @@ When you save the link, the site reads the MP3's length (shown under the box), s
 Set **Access ends** for subscriptions; after that date they can still log in but see a renewal message instead of files. Switch an account off to block logins without deleting it.
 
 Customer downloads are logged and shown on the overview and each customer's page.
+
+When a customer taps **Ask to add** on a locked category, the request appears under **Enquiries** (and is emailed to `CONTACT_EMAIL` when email is set up).
 
 ## Troubleshooting
 

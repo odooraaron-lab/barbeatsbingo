@@ -18,6 +18,8 @@ export const metadata: Metadata = {
     images: [{ url: IMAGES.socialShare }],
   },
   twitter: { card: "summary_large_image" },
+  // Opening from the home screen on iPhone: full screen, with this name under the icon.
+  appleWebApp: { capable: true, title: "Bar Beats", statusBarStyle: "black" },
 };
 
 export const viewport: Viewport = {

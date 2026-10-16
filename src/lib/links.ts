@@ -1,5 +1,7 @@
 import "server-only";
 import { id3Size, mp3Duration } from "./mp3";
+import { parseCallList, type CallList } from "./call-list";
+import { pdfTextPages } from "./pdf-text";
 
 const USER_AGENT = "Mozilla/5.0 (compatible; BarBeatsBingoPortal/1.0)";
 
@@ -164,4 +166,35 @@ export async function fetchPdf(url: string): Promise<ReadableStream<Uint8Array>>
       return reader.cancel();
     },
   });
+}
+
+/** Downloads a PDF from a link into memory (up to 30 MB). */
+export async function fetchPdfBytes(url: string): Promise<Uint8Array> {
+  const reader = (await fetchPdf(url)).getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done || !value) break;
+    chunks.push(value);
+    total += value.length;
+  }
+  const out = new Uint8Array(total);
+  let at = 0;
+  for (const c of chunks) {
+    out.set(c, at);
+    at += c.length;
+  }
+  return out;
+}
+
+/** Reads the songs off a call list PDF link. Null if it can't be read or isn't a call list. */
+export async function readCallList(url: string): Promise<CallList | null> {
+  try {
+    const pages = await pdfTextPages(await fetchPdfBytes(url), 20);
+    return parseCallList(pages)?.list ?? null;
+  } catch (err) {
+    console.error("[links] could not read call list", err);
+    return null;
+  }
 }

@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   poweredByHeader: false,
+  // pdf.js reads call lists and scorecards on the server; it runs best unbundled.
+  serverExternalPackages: ["pdfjs-dist"],
   turbopack: {
     rules: {
       "*.css": {

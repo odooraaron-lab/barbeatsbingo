@@ -139,6 +139,12 @@ export default async function PlaylistAdminPage({ params }: { params: Promise<{ 
                           <>
                             Customers see: <span className="text-white">{current.title}</span>
                             {current.fileName && current.fileName !== current.title ? ` (${current.fileName})` : ""}
+                            {slot.key === "tracklist" && current.meta?.callList && (
+                              <>
+                                {" "}
+                                · {current.meta.callList.songs.length} songs read, so the call list follows the player
+                              </>
+                            )}
                           </>
                         ) : (
                           slot.hint
