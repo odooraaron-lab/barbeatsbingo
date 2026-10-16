@@ -57,6 +57,16 @@ export function slugify(value: string) {
   );
 }
 
+/** 2843.2 -> "47:23", 3725 -> "1:02:05" */
+export function formatDuration(seconds: number) {
+  if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
+  const total = Math.floor(seconds);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const ss = String(total % 60).padStart(2, "0");
+  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
+}
+
 export const FILE_KINDS: { value: FileKind; label: string }[] = [
   { value: "video", label: "Video" },
   { value: "audio", label: "Audio" },
@@ -65,7 +75,7 @@ export const FILE_KINDS: { value: FileKind; label: string }[] = [
   { value: "document", label: "Document" },
   { value: "archive", label: "Zip / archive" },
   { value: "other", label: "Other" },
-  { value: "preview", label: "Audio preview" },
+  { value: "preview", label: "MP3 for the player" },
 ];
 
 export function kindLabel(kind: FileKind) {

@@ -184,7 +184,7 @@ def main() -> int:
     print(f"\nDone in {minutes:.1f} min: {ok} made" + (f", {failed} failed" if failed else "") + ".")
     if ok:
         print('Next: share each "... - Preview.mp3" in WorkDrive and paste the link into the show\'s')
-        print('"Audio preview" box in the website admin.')
+        print('"MP3 for the player" box in the website admin.')
     pause_before_closing()
     return 1 if failed else 0
 

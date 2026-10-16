@@ -149,6 +149,7 @@ export async function getPlaylist(user: SessionUser, categorySlug: string, playl
       source: files.source,
       fileName: files.fileName,
       sizeBytes: files.sizeBytes,
+      durationSeconds: files.durationSeconds,
       createdAt: files.createdAt,
     })
     .from(files)

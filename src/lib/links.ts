@@ -1,4 +1,5 @@
 import "server-only";
+import { id3Size, mp3Duration } from "./mp3";
 
 const USER_AGENT = "Mozilla/5.0 (compatible; BarBeatsBingoPortal/1.0)";
 
@@ -8,6 +9,12 @@ export type LinkCheck = {
   isPdf: boolean;
   fileName: string | null;
   size: number | null;
+  /** The type the link says it is, e.g. "audio/mpeg". */
+  contentType: string;
+  /** Phones can stream it straight from the link: it supports byte ranges and has an audio/video type. */
+  streamDirect: boolean;
+  /** Playing time, for MP3s. */
+  durationSeconds: number | null;
 };
 
 function fileNameFrom(disposition: string | null) {
@@ -32,40 +39,83 @@ function looksLikeHtml(head: Buffer) {
   return /<!doctype html|<html[\s>]/i.test(head.subarray(0, 2048).toString("latin1"));
 }
 
+function looksLikeMp3(head: Buffer, type: string, fileName: string | null) {
+  return (
+    /audio\/(mpeg|mp3)/.test(type) ||
+    /\.mp3$/i.test(fileName ?? "") ||
+    head.subarray(0, 3).toString("latin1") === "ID3" ||
+    (head[0] === 0xff && (head[1] & 0xe6) === 0xe2)
+  );
+}
+
+/** Reads `length` bytes of a link starting at `offset`. */
+async function readRange(url: string, offset: number, length: number) {
+  const res = await fetch(url, {
+    headers: { Range: `bytes=${offset}-${offset + length - 1}`, "User-Agent": USER_AGENT, "Accept-Encoding": "identity" },
+    redirect: "follow",
+    signal: AbortSignal.timeout(10_000),
+  });
+  let head = Buffer.alloc(0);
+  if (res.ok && res.body) {
+    const reader = res.body.getReader();
+    while (head.length < length) {
+      const { done, value } = await reader.read();
+      if (done || !value) break;
+      head = Buffer.concat([head, Buffer.from(value)]);
+    }
+    await reader.cancel().catch(() => {});
+  }
+  return { res, head: head.subarray(0, length) };
+}
+
+async function readMp3Duration(url: string, head: Buffer, size: number | null, rangeOk: boolean) {
+  if (!size) return null;
+  const tag = id3Size(head);
+  let audio = head.subarray(Math.min(tag, head.length));
+  // A large tag (e.g. cover art) pushes the first frame past what we read.
+  if (audio.length < 512 && rangeOk && tag < size) {
+    audio = (await readRange(url, tag, 4096)).head;
+  }
+  const seconds = mp3Duration(audio, size - tag);
+  return seconds && Number.isFinite(seconds) ? Math.round(seconds * 100) / 100 : null;
+}
+
 /**
- * Fetches the first couple of KB of a link to see what customers will get:
- * a real file (and its name and size) or a web page.
+ * Fetches the first few KB of a link to see what customers will get:
+ * a real file (its name, size and, for MP3s, length) or a web page.
  */
 export async function checkLink(url: string): Promise<LinkCheck> {
-  const empty: LinkCheck = { reachable: false, isHtml: false, isPdf: false, fileName: null, size: null };
+  const empty: LinkCheck = {
+    reachable: false,
+    isHtml: false,
+    isPdf: false,
+    fileName: null,
+    size: null,
+    contentType: "",
+    streamDirect: false,
+    durationSeconds: null,
+  };
   try {
-    const res = await fetch(url, {
-      headers: { Range: "bytes=0-4095", "User-Agent": USER_AGENT },
-      redirect: "follow",
-      signal: AbortSignal.timeout(10_000),
-    });
+    const { res, head } = await readRange(url, 0, 4096);
     if (!res.ok) return empty;
 
-    let head = Buffer.alloc(0);
-    if (res.body) {
-      const reader = res.body.getReader();
-      while (head.length < 4096) {
-        const { done, value } = await reader.read();
-        if (done || !value) break;
-        head = Buffer.concat([head, Buffer.from(value)]);
-      }
-      await reader.cancel().catch(() => {});
-    }
-
-    const type = res.headers.get("content-type") ?? "";
+    const type = (res.headers.get("content-type") ?? "").toLowerCase();
     const range = res.headers.get("content-range")?.match(/\/(\d+)$/);
     const length = res.status === 200 ? Number(res.headers.get("content-length")) : NaN;
+    const size = range ? Number(range[1]) : Number.isFinite(length) && length > 0 ? length : null;
+    const rangeOk = res.status === 206 && !!range;
+    const fileName = fileNameFrom(res.headers.get("content-disposition"));
+    const isHtml = type.includes("text/html") || looksLikeHtml(head);
     return {
       reachable: true,
-      isHtml: type.includes("text/html") || looksLikeHtml(head),
+      isHtml,
       isPdf: type.includes("pdf") || looksLikePdf(head),
-      fileName: fileNameFrom(res.headers.get("content-disposition")),
-      size: range ? Number(range[1]) : Number.isFinite(length) && length > 0 ? length : null,
+      fileName,
+      size,
+      contentType: type.split(";")[0].trim(),
+      streamDirect: rangeOk && /^(audio|video)\//.test(type),
+      durationSeconds:
+        !isHtml && looksLikeMp3(head, type, fileName) ? await readMp3Duration(url, head, size, rangeOk) : null,
     };
   } catch {
     return empty;

@@ -1,6 +1,9 @@
 import type { FileKind } from "@/db/schema";
 
-/** The three files every show has. The track list is also drawn on the show page. */
+/**
+ * The links every show has: three downloads plus the MP3 the show page player uses.
+ * The track list is also drawn on the show page.
+ */
 export const SHOW_SLOTS = [
   {
     key: "show",
@@ -22,8 +25,8 @@ export const SHOW_SLOTS = [
   },
   {
     key: "preview",
-    label: "Audio preview (optional)",
-    hint: "A small MP3 of the show for the player on the show page. It starts much faster than the video. Not shown as a download.",
+    label: "MP3 for the player",
+    hint: "The show's \"- Preview.mp3\" file. Customers hear it in the player on the show page (it isn't a download). Without it, the player streams the video, which is slow.",
     kinds: ["preview"] as FileKind[],
   },
 ] as const;

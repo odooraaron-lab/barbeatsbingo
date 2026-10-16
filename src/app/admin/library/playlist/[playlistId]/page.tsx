@@ -7,13 +7,13 @@ import { db } from "@/db";
 import { categories, files, playlists } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { storageConfigured } from "@/lib/storage";
-import { FILE_KINDS, formatBytes, formatDate, kindLabel } from "@/lib/format";
+import { FILE_KINDS, formatBytes, formatDate, formatDuration, kindLabel } from "@/lib/format";
 import type { FileKind } from "@/db/schema";
 import { ActionForm } from "@/components/admin/action-form";
 import { Breadcrumbs } from "@/components/portal/breadcrumbs";
 import { FileIcon } from "@/components/portal/file-icon";
 import { addLinkFile, deleteFile, deletePlaylist, saveShowFiles, updateFile, updatePlaylist } from "../../actions";
-import { SHOW_SLOTS, filesBySlot } from "@/lib/show-files";
+import { INTRO_SKIP_SECONDS, SHOW_SLOTS, filesBySlot } from "@/lib/show-files";
 import { Uploader } from "./uploader";
 
 export const metadata: Metadata = { title: "Show" };
@@ -88,7 +88,7 @@ export default async function PlaylistAdminPage({ params }: { params: Promise<{ 
             <p className="mt-1 text-sm text-mist">
               In WorkDrive, share each file with an external link that allows downloads, then paste the links here.
               Customers download the first three separately, and the track list also shows on the show page. The
-              optional audio preview makes the show page&apos;s player start much faster.
+              MP3 is what the player on the show page plays.
             </p>
             <div className="mt-5">
               <ActionForm
@@ -128,7 +128,14 @@ export default async function PlaylistAdminPage({ params }: { params: Promise<{ 
                         )}
                       </div>
                       <p className="hint !mt-0">
-                        {current ? (
+                        {current && slot.key === "preview" ? (
+                          <>
+                            Plays in the show page player:{" "}
+                            <span className="text-white">{current.fileName || current.title}</span>
+                            {current.durationSeconds != null &&
+                              ` · ${formatDuration(Math.max(0, current.durationSeconds - INTRO_SKIP_SECONDS))} after the intro`}
+                          </>
+                        ) : current ? (
                           <>
                             Customers see: <span className="text-white">{current.title}</span>
                             {current.fileName && current.fileName !== current.title ? ` (${current.fileName})` : ""}

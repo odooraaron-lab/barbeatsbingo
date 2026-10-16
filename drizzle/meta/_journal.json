@@ -15,6 +15,13 @@
       "when": 1792125510318,
       "tag": "0001_audio_preview",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792144876845,
+      "tag": "0002_media_details",
+      "breakpoints": true
     }
   ]
 }

@@ -5,6 +5,7 @@ import {
   integer,
   pgEnum,
   pgTable,
+  real,
   text,
   timestamp,
   uniqueIndex,
@@ -137,6 +138,12 @@ export const files = pgTable(
     fileName: text("file_name").notNull().default(""),
     sizeBytes: bigint("size_bytes", { mode: "number" }),
     contentType: text("content_type").notNull().default(""),
+    // Playing time in seconds, read from the file when its link is saved (MP3s). Lets the
+    // player show the length before any sound has loaded, which matters on iPhones.
+    durationSeconds: real("duration_seconds"),
+    // Whether phones can play the link directly: it answers byte-range requests with an
+    // audio/video type. When false, the player's audio is relayed through the site instead.
+    streamDirect: boolean("stream_direct"),
     sortOrder: integer("sort_order").notNull().default(0),
     ...timestamps,
   },

@@ -216,7 +216,11 @@ export async function saveShowFiles(playlistId: string, _prev: ActionResult, fd:
   // Check new or changed links so we can grab the real file name and spot mistakes.
   const checks: (LinkCheck | null)[] = await Promise.all(
     plans.map((p) =>
-      p.url && (!p.current || p.current.externalUrl !== p.url || !p.current.fileName)
+      p.url &&
+      (!p.current ||
+        p.current.externalUrl !== p.url ||
+        !p.current.fileName ||
+        (p.slot.key === "preview" && (p.current.streamDirect === null || p.current.durationSeconds === null)))
         ? checkLink(directDownloadUrl(p.url))
         : Promise.resolve(null),
     ),
@@ -240,6 +244,8 @@ export async function saveShowFiles(playlistId: string, _prev: ActionResult, fd:
       );
     } else if (check && (p.slot.key === "scorecards" || p.slot.key === "tracklist") && !check.isPdf) {
       warnings.push(`${p.slot.label}: this link doesn't seem to be a PDF.`);
+    } else if (check && p.slot.key === "preview" && !check.durationSeconds) {
+      warnings.push(`${p.slot.label}: this link doesn't seem to be an MP3. Check it's the "- Preview.mp3" file.`);
     }
 
     const sameLink = p.current?.externalUrl === p.url;
@@ -253,6 +259,8 @@ export async function saveShowFiles(playlistId: string, _prev: ActionResult, fd:
       storageKey: null,
       fileName,
       sizeBytes: check?.size ?? (sameLink ? (p.current?.sizeBytes ?? null) : null),
+      durationSeconds: check?.reachable ? check.durationSeconds : sameLink ? (p.current?.durationSeconds ?? null) : null,
+      streamDirect: check?.reachable ? check.streamDirect : sameLink ? (p.current?.streamDirect ?? null) : null,
       sortOrder: p.sortOrder,
     };
     if (p.current) await db.update(files).set(values).where(eq(files.id, p.current.id));
@@ -306,6 +314,14 @@ export async function updateFile(id: string, _prev: ActionResult, fd: FormData):
     const problem = linkProblem(url);
     if (problem) return fail(problem);
     values.externalUrl = new URL(url).toString();
+    const [current] = await db.select({ url: files.externalUrl }).from(files).where(eq(files.id, id)).limit(1);
+    if (current && current.url !== values.externalUrl) {
+      // A different file: re-read its length and how it can be played.
+      const check = await checkLink(directDownloadUrl(values.externalUrl));
+      values.durationSeconds = check.reachable ? check.durationSeconds : null;
+      values.streamDirect = check.reachable ? check.streamDirect : null;
+      if (check.size) values.sizeBytes = check.size;
+    }
   }
   await db.update(files).set(values).where(eq(files.id, id));
   refresh();

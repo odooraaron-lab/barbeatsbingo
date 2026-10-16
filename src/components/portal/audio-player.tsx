@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Pause, Play, Square, Volume2 } from "lucide-react";
+import { Loader2, Pause, Play, RotateCcw, Square, Volume2 } from "lucide-react";
 
 function formatTime(seconds: number) {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
@@ -12,24 +12,43 @@ function formatTime(seconds: number) {
   return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
 }
 
+const finite = (n: number | null | undefined): n is number => n != null && Number.isFinite(n) && n > 0;
+
 /**
  * Plays a show's file as sound only (the picture of a video isn't shown).
- * The length loads before pressing play so hosts can see how long the show runs.
  *
  * `skipSeconds` hides an intro: playback starts that far in, and the clock,
  * length and seek bar all count from there, so the show appears to start at 0:00.
+ *
+ * `knownDuration` is the file's length worked out by the server, so the length
+ * shows straight away. iPhones don't load any audio until Play is pressed.
  */
-export function AudioPlayer({ src, title, skipSeconds = 0 }: { src: string; title: string; skipSeconds?: number }) {
+export function AudioPlayer({
+  src,
+  title,
+  skipSeconds = 0,
+  knownDuration = null,
+}: {
+  src: string;
+  title: string;
+  skipSeconds?: number;
+  knownDuration?: number | null;
+}) {
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [rawDuration, setRawDuration] = useState<number | null>(null);
+  const [rawDuration, setRawDuration] = useState<number | null>(finite(knownDuration) ? knownDuration : null);
+  const [loaded, setLoaded] = useState(false); // the browser has read the file's details, so seeking works
   const [rawTime, setRawTime] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [buffering, setBuffering] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [lengthLater, setLengthLater] = useState(false);
+  // True from pressing Play on an unloaded file until it's past the intro; it stays muted meanwhile.
+  const startingRef = useRef(false);
 
   // Only skip when the file is clearly longer than the intro.
   const skipFor = (fileDuration: number | null | undefined) =>
-    fileDuration != null && Number.isFinite(fileDuration) && fileDuration > skipSeconds + 5 ? skipSeconds : 0;
+    finite(fileDuration) && fileDuration > skipSeconds + 5 ? skipSeconds : 0;
+  const lengthOf = (audio: HTMLAudioElement) => (finite(audio.duration) ? audio.duration : knownDuration);
   const skip = skipFor(rawDuration);
 
   // Stop the sound when the page is left (pages can stay mounted in the background).
@@ -38,26 +57,56 @@ export function AudioPlayer({ src, title, skipSeconds = 0 }: { src: string; titl
     return () => audio?.pause();
   }, []);
 
+  // Some phones don't read the length until Play is pressed; say so rather than "Getting the length…" forever.
+  useEffect(() => {
+    if (rawDuration != null) return;
+    const timer = setTimeout(() => setLengthLater(true), 4000);
+    return () => clearTimeout(timer);
+  }, [rawDuration]);
+
   /** Moves to the start of the show (just after the intro). */
   const toStart = (audio: HTMLAudioElement) => {
-    const s = skipFor(audio.duration);
+    const s = skipFor(lengthOf(audio));
     audio.currentTime = s;
     setRawTime(s);
+  };
+
+  /** Un-mutes once playback is safely past the intro. */
+  const releaseIfPastIntro = (audio: HTMLAudioElement) => {
+    if (startingRef.current && audio.currentTime >= skipFor(lengthOf(audio)) - 0.25) {
+      startingRef.current = false;
+      audio.muted = false;
+    }
+  };
+
+  const cancelStarting = (audio: HTMLAudioElement) => {
+    startingRef.current = false;
+    audio.muted = false;
+  };
+
+  const play = (audio: HTMLAudioElement) => {
+    const s = skipFor(lengthOf(audio));
+    if (audio.readyState >= HTMLMediaElement.HAVE_METADATA) {
+      if (audio.currentTime < s) toStart(audio);
+    } else if (s > 0) {
+      // Nothing loaded yet, so the browser can't jump past the intro until it has the file's details.
+      startingRef.current = true;
+      audio.muted = true;
+    }
+    setBuffering(true);
+    audio.play().catch((err: unknown) => {
+      // Pressing Pause before the sound starts rejects play() harmlessly; only a real format problem is fatal.
+      setBuffering(false);
+      cancelStarting(audio);
+      if (err instanceof DOMException && err.name === "NotSupportedError") setFailed(true);
+    });
   };
 
   const toggle = () => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (audio.paused) {
-      if (audio.currentTime < skipFor(audio.duration)) toStart(audio);
-      setBuffering(true);
-      audio.play().catch(() => {
-        setBuffering(false);
-        setFailed(true);
-      });
-    } else {
-      audio.pause();
-    }
+    if (audio.paused) play(audio);
+    else audio.pause();
   };
 
   const stop = () => {
@@ -71,15 +120,76 @@ export function AudioPlayer({ src, title, skipSeconds = 0 }: { src: string; titl
   const seek = (value: number) => {
     const audio = audioRef.current;
     if (!audio || !Number.isFinite(value)) return;
-    const target = skipFor(audio.duration) + value;
+    const target = skipFor(lengthOf(audio)) + Math.max(0, value);
     audio.currentTime = target;
     setRawTime(target);
   };
 
-  const duration = rawDuration != null && Number.isFinite(rawDuration) ? rawDuration - skip : null;
+  const retry = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    setFailed(false);
+    setLoaded(false);
+    audio.load();
+  };
+
+  const duration = finite(rawDuration) ? rawDuration - skip : null;
   const time = Math.max(0, Math.min(rawTime - skip, duration ?? Infinity));
-  const known = duration != null && Number.isFinite(duration) && duration > 0;
+  const known = finite(duration);
   const progress = known ? Math.min(100, (time / duration) * 100) : 0;
+  const canSeek = known && loaded;
+
+  // Lock screen and headphone controls on phones.
+  const latest = useRef({ toggle, stop, seek, time });
+  useEffect(() => {
+    latest.current = { toggle, stop, seek, time };
+  });
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+    const session = navigator.mediaSession;
+    try {
+      session.metadata = new MediaMetadata({
+        title,
+        artist: "Bar Beats Bingo",
+        artwork: [{ src: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+      });
+    } catch {
+      /* not supported */
+    }
+    const handlers: [MediaSessionAction, MediaSessionActionHandler][] = [
+      ["play", () => audioRef.current?.paused && latest.current.toggle()],
+      ["pause", () => audioRef.current && !audioRef.current.paused && latest.current.toggle()],
+      ["stop", () => latest.current.stop()],
+      ["seekbackward", (d) => latest.current.seek(latest.current.time - (d.seekOffset ?? 10))],
+      ["seekforward", (d) => latest.current.seek(latest.current.time + (d.seekOffset ?? 10))],
+    ];
+    for (const [action, handler] of handlers) {
+      try {
+        session.setActionHandler(action, handler);
+      } catch {
+        /* this action isn't supported here */
+      }
+    }
+    return () => {
+      for (const [action] of handlers) {
+        try {
+          session.setActionHandler(action, null);
+        } catch {
+          /* ignore */
+        }
+      }
+      session.metadata = null;
+    };
+  }, [title]);
+
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator) || !known || !loaded) return;
+    try {
+      navigator.mediaSession.setPositionState({ duration, position: Math.min(time, duration), playbackRate: 1 });
+    } catch {
+      /* not supported */
+    }
+  }, [known, loaded, duration, time]);
 
   return (
     <div className="panel p-5 sm:p-6">
@@ -96,20 +206,28 @@ export function AudioPlayer({ src, title, skipSeconds = 0 }: { src: string; titl
       </div>
 
       {failed ? (
-        <p className="alert alert-info mt-5 text-sm" role="status">
-          This file can&apos;t be played here. Use the Download button to save it and play it on your computer.
-        </p>
+        <div className="mt-5">
+          <p className="alert alert-info text-sm" role="status">
+            The sound couldn&apos;t be loaded. Check your connection and try again, or use the Download button to save
+            the file.
+          </p>
+          <button type="button" onClick={retry} className="btn btn-ghost mt-3 w-full">
+            <RotateCcw size={16} aria-hidden /> Try again
+          </button>
+        </div>
       ) : (
         <>
           <div className="mt-6 flex items-baseline justify-between gap-3">
             <span className="display text-3xl tabular-nums" aria-hidden>
               {formatTime(time)}
             </span>
-            <span className="text-sm text-mist">
+            <span className="text-right text-sm text-mist">
               {known ? (
                 <>
                   Length <strong className="tabular-nums text-white">{formatTime(duration)}</strong>
                 </>
+              ) : lengthLater && !playing ? (
+                "Length shows once it starts"
               ) : (
                 "Getting the length…"
               )}
@@ -127,17 +245,18 @@ export function AudioPlayer({ src, title, skipSeconds = 0 }: { src: string; titl
                 style={{ left: `${progress}%` }}
               />
             )}
+            {/* Taller than the bar so it's easy to grab with a finger. */}
             <input
               type="range"
               min={0}
-              max={known ? duration : 0}
+              max={canSeek ? duration : 0}
               step={1}
-              value={Math.min(time, known ? duration : 0)}
-              disabled={!known}
+              value={canSeek ? Math.min(time, duration) : 0}
+              disabled={!canSeek}
               onChange={(e) => seek(Number(e.target.value))}
               aria-label="Position in the show"
               aria-valuetext={`${formatTime(time)} of ${known ? formatTime(duration) : "unknown length"}`}
-              className="absolute inset-x-0 -top-2 h-6 w-full cursor-pointer opacity-0 disabled:cursor-default"
+              className="absolute inset-x-0 -top-4 h-10 w-full cursor-pointer opacity-0 disabled:cursor-default"
             />
           </div>
 
@@ -165,37 +284,53 @@ export function AudioPlayer({ src, title, skipSeconds = 0 }: { src: string; titl
         // The #t= hint lets browsers fetch from the right spot first; the handlers below make sure of it.
         src={skipSeconds > 0 ? `${src}#t=${skipSeconds}` : src}
         preload="metadata"
+        playsInline
         onLoadedMetadata={(e) => {
           const audio = e.currentTarget;
-          setRawDuration(audio.duration);
-          const s = skipFor(audio.duration);
-          if (Math.abs(audio.currentTime - s) > 0.5 && audio.paused) toStart(audio);
+          if (finite(audio.duration)) setRawDuration(audio.duration);
+          setLoaded(true);
+          const s = skipFor(lengthOf(audio));
+          if (Math.abs(audio.currentTime - s) > 0.5 && (audio.paused || startingRef.current)) {
+            audio.currentTime = s;
+            setRawTime(s);
+          }
         }}
-        onDurationChange={(e) => setRawDuration(e.currentTarget.duration)}
+        onDurationChange={(e) => finite(e.currentTarget.duration) && setRawDuration(e.currentTarget.duration)}
         onTimeUpdate={(e) => {
           const audio = e.currentTarget;
-          const s = skipFor(audio.duration);
+          const s = skipFor(lengthOf(audio));
           // Never let the intro play, whatever the browser did.
           if (!audio.paused && audio.currentTime < s - 0.25) {
             audio.currentTime = s;
             return;
           }
+          releaseIfPastIntro(audio);
           setRawTime(audio.currentTime);
         }}
+        onSeeked={(e) => releaseIfPastIntro(e.currentTarget)}
         onPlay={() => setPlaying(true)}
-        onPlaying={() => setBuffering(false)}
+        onPlaying={(e) => {
+          setBuffering(false);
+          releaseIfPastIntro(e.currentTarget);
+        }}
         onWaiting={() => setBuffering(true)}
         onCanPlay={() => setBuffering(false)}
-        onPause={() => {
+        onPause={(e) => {
           setPlaying(false);
           setBuffering(false);
+          cancelStarting(e.currentTarget);
         }}
         onEnded={(e) => {
           setPlaying(false);
           setBuffering(false);
           toStart(e.currentTarget);
         }}
-        onError={() => setFailed(true)}
+        onError={(e) => {
+          setPlaying(false);
+          setBuffering(false);
+          cancelStarting(e.currentTarget);
+          setFailed(true);
+        }}
       />
     </div>
   );

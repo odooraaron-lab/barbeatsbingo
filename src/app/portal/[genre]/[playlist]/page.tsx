@@ -31,6 +31,7 @@ export default async function ShowPage({ params }: { params: Promise<{ genre: st
       src={`/api/files/${playable.id}/stream`}
       title={(showFile ?? playable).title}
       skipSeconds={INTRO_SKIP_SECONDS}
+      knownDuration={playable.durationSeconds}
     />
   );
 

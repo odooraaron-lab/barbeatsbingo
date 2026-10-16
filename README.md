@@ -3,7 +3,7 @@
 The Bar Beats Bingo website and customer portal.
 
 - **Public website**: home, how it works, FAQ and tips, fundraising, host guides and a contact form. Same addresses as the old WordPress site, so existing links keep working.
-- **Customer portal** (`/portal`): customers log in and go **Category → Show**, then download the show's three files (show file, scorecards, track list). The track list PDF is also shown right on the show page.
+- **Customer portal** (`/portal`): customers log in and go **Category → Show**, then download the show's three files (show file, scorecards, track list). The track list PDF is also shown right on the show page, next to a player for the show's sound.
 - **Admin** (`/admin`): add customers, choose what each one can download (everything, whole categories, or single shows), set an access end date, paste each show's Zoho WorkDrive links, and read contact-form enquiries.
 
 Built with Next.js 16 and Neon Postgres (via Drizzle ORM). Files are linked from Zoho WorkDrive; uploading to S3-compatible storage (e.g. Cloudflare R2) is also supported. Runs on Vercel.
@@ -85,14 +85,14 @@ In Vercel, **Settings → Domains → Add** `barbeatsbingo.com` and `www.barbeat
 **Adding a show**
 
 1. **Library →** open the category **→ Add a show** (e.g. `Show 01`).
-2. In Zoho WorkDrive, open the show's folder. For each of the three files: right-click → **Share → External share link**, make sure **downloads are allowed**, and copy the link.
-3. Paste the three links into **Show files from Zoho**: the show file, the scorecards PDF and the track list PDF, then **Save show files**.
+2. In Zoho WorkDrive, open the show's folder. For each of the four files: right-click → **Share → External share link**, make sure **downloads are allowed**, and copy the link.
+3. Paste the links into **Show files from Zoho**: the show file, the scorecards PDF, the track list PDF and the MP3 for the player, then **Save show files**.
 4. When saving, each link is checked and the real file name is picked up from Zoho. If a link opens a Zoho page instead of the file (for example, you shared the folder rather than the file), you'll see a warning saying which one.
 5. Tick **Visible to customers** under Show settings when it's ready. New shows start hidden.
 
 Customers see three download buttons, and the track list PDF is drawn on the page so they can read it without downloading. Rename a file or change its order under **Files**.
 
-**Audio previews (makes the player start fast)**
+**MP3s for the player (makes it start fast and work on phones)**
 
 The player on each show page can play straight from the show video, but that means streaming the whole video (around 670 MB) just to hear it, so it's slow to start and to skip around. A small MP3 of the show is about 30 times smaller (roughly 1 MB per minute).
 
@@ -103,9 +103,11 @@ The player on each show page can play straight from the show video, but that mea
    ```
 
    It writes `<video name> - Preview.mp3` next to each show video, lists what it found and asks before starting. It skips shows that already have a preview, so run it again whenever you add shows. `--only` limits it to the show videos if the folder also holds individual music videos.
-2. Upload the MP3s to WorkDrive (or let WorkDrive sync them), share each with an external link, and paste it into the show's **Audio preview** box.
+2. Upload the MP3s to WorkDrive (or let WorkDrive sync them), share each with an external link, and paste it into the show's **MP3 for the player** box.
 
-The player uses the preview whenever a show has one, and the video otherwise. Customers don't see the preview as a download. Keep the whole show in the preview, intro included: the player skips the first 28 seconds itself (change `INTRO_SKIP_SECONDS` in `src/lib/show-files.ts` if your intros change).
+The player uses the MP3 whenever a show has one, and the video otherwise. Customers don't see the MP3 as a download. Keep the whole show in the MP3, intro included: the player skips the first 28 seconds itself (change `INTRO_SKIP_SECONDS` in `src/lib/show-files.ts` if your intros change).
+
+When you save the link, the site reads the MP3's length (shown under the box), so customers see how long the show runs before anything loads. It also checks whether phones can stream the link directly. iPhones only play audio from links that send the file in pieces and say it's audio; if a link doesn't, the site passes the sound through itself, so it still plays. Videos are never passed through (they're too big), which is another reason to add the MP3.
 
 **Customers → Add a customer**, then choose what they can download:
 
