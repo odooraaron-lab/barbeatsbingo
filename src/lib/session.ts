@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { createHash, randomBytes } from "node:crypto";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { sessions, users } from "@/db/schema";
 
@@ -55,6 +55,8 @@ export type SessionUser = {
   role: "admin" | "member";
   accessAll: boolean;
   accessExpiresAt: Date | null;
+  /** Worked out by the database, so pages never read the clock while rendering. */
+  accessExpired: boolean;
 };
 
 /** The signed-in user for this request, or null. Memoised per request. */
@@ -72,10 +74,11 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
       isActive: users.isActive,
       accessAll: users.accessAll,
       accessExpiresAt: users.accessExpiresAt,
+      accessExpired: sql<boolean>`coalesce(${users.accessExpiresAt} < now(), false)`,
     })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
-    .where(and(eq(sessions.id, hashToken(token)), gt(sessions.expiresAt, new Date())))
+    .where(and(eq(sessions.id, hashToken(token)), gt(sessions.expiresAt, sql`now()`)))
     .limit(1);
 
   if (!row || !row.isActive) return null;

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { passwordTokens, users } from "@/db/schema";
 import { hashToken, newToken } from "./session";
@@ -28,7 +28,7 @@ export async function findValidToken(token: string) {
       and(
         eq(passwordTokens.id, hashToken(token)),
         isNull(passwordTokens.usedAt),
-        gt(passwordTokens.expiresAt, new Date()),
+        gt(passwordTokens.expiresAt, sql`now()`),
         eq(users.isActive, true),
       ),
     )

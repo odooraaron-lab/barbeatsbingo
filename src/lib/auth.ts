@@ -20,9 +20,8 @@ export async function getAdminOrNull(): Promise<SessionUser | null> {
   return user?.role === "admin" ? user : null;
 }
 
-export function accessHasExpired(user: Pick<SessionUser, "role" | "accessExpiresAt">) {
-  if (user.role === "admin" || !user.accessExpiresAt) return false;
-  return user.accessExpiresAt.getTime() < Date.now();
+export function accessHasExpired(user: Pick<SessionUser, "role" | "accessExpired">) {
+  return user.role !== "admin" && user.accessExpired;
 }
 
 /** Only allow redirects back to our own pages. */
