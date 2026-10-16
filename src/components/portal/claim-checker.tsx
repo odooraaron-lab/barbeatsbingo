@@ -11,7 +11,6 @@ import {
   winners,
   type BingoCard,
   type CardSet,
-  type LineRule,
 } from "@/lib/bingo";
 import { useShowSession } from "./show-session";
 
@@ -27,18 +26,16 @@ function CardView({
   card,
   set,
   played,
-  rule,
   songsByN,
   lastN,
 }: {
   card: BingoCard;
   set: CardSet;
   played: number;
-  rule: LineRule;
   songsByN: Map<number, CallSong>;
   lastN: number;
 }) {
-  const progress = cardProgress(card, set, played, rule);
+  const progress = cardProgress(card, set, played);
   const inWin = new Set(progress.done.flatMap((l) => l.cells));
   return (
     <div>
@@ -120,7 +117,6 @@ export function ClaimChecker({ isAdmin = false }: { isAdmin?: boolean }) {
   const [override, setOverride] = useState<number | null>(null);
   const [typed, setTyped] = useState("");
   const [checked, setChecked] = useState<string | null>(null);
-  const [rule, setRule] = useState<LineRule>("rows");
   const inputId = useId();
 
   const songs = useMemo(() => session?.callList?.songs ?? [], [session?.callList]);
@@ -144,11 +140,11 @@ export function ClaimChecker({ isAdmin = false }: { isAdmin?: boolean }) {
       cards
         ? PATTERNS.map((p) => ({
             pattern: p,
-            winners: winners(cards, p.key, played, rule),
-            close: oneAway(cards, p.key, played, rule),
+            winners: winners(cards, p.key, played),
+            close: oneAway(cards, p.key, played),
           }))
         : [],
-    [cards, played, rule],
+    [cards, played],
   );
 
   if (!session || songs.length === 0) return null;
@@ -268,10 +264,7 @@ export function ClaimChecker({ isAdmin = false }: { isAdmin?: boolean }) {
                     Check
                   </button>
                 </form>
-                <label className="mt-3 flex items-center gap-2 text-sm text-mist">
-                  <input type="checkbox" checked={rule === "any"} onChange={(e) => setRule(e.target.checked ? "any" : "rows")} />
-                  Count columns and diagonals as lines (not just rows across)
-                </label>
+                <p className="mt-2 text-sm text-fog">Lines are rows across. Winning rows are outlined in yellow.</p>
                 {checked !== null && !card && (
                   <p className="alert alert-error mt-4" role="alert">
                     There&apos;s no card {checked.trim() || "with that number"} in this game. Check the number on the scorecard.
@@ -280,7 +273,7 @@ export function ClaimChecker({ isAdmin = false }: { isAdmin?: boolean }) {
                 {card && (
                   <div className="mt-5" aria-live="polite">
                     <h4 className="mb-3 font-sans font-bold">Card {card.id}</h4>
-                    <CardView card={card} set={cards} played={played} rule={rule} songsByN={songsByN} lastN={played} />
+                    <CardView card={card} set={cards} played={played} songsByN={songsByN} lastN={played} />
                   </div>
                 )}
               </section>

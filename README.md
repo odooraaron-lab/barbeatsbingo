@@ -4,7 +4,7 @@ The Bar Beats Bingo website and customer portal.
 
 - **Public website**: home, how it works, FAQ and tips, fundraising, host guides and a contact form. Same addresses as the old WordPress site, so existing links keep working.
 - **Customer portal** (`/portal`): customers log in and go **Category → Show**, then download the show's three files (show file, scorecards, track list). The library shows every category: the ones they can play are lit up, the rest are greyed out (locked, with a one-tap "Ask to add", or "Coming soon" when empty).
-- **Show page**: the call list (track list PDF) is drawn on the page next to a player for the show's sound. The song that's playing lights up, tapping a song jumps there, and **Check a bingo** lists the songs played so far by letter (and checks card numbers once a show's cards are stored).
+- **Show page**: the call list (track list PDF) is drawn on the page next to a player for the show's sound. The song that's playing lights up, tapping a song jumps there, and **Check a bingo** lists the songs played so far by letter (and checks card numbers once a show's cards are stored: 1, 2 or 3 lines, where a line is a row across, the cross and blackout).
 - **Phone app**: customers can add the portal to their home screen and open it like an app.
 - **Admin** (`/admin`): add customers, choose what each one can download (everything, whole categories, or single shows), set an access end date, paste each show's Zoho WorkDrive links, and read contact-form enquiries.
 
