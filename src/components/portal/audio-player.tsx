@@ -15,14 +15,22 @@ function formatTime(seconds: number) {
 /**
  * Plays a show's file as sound only (the picture of a video isn't shown).
  * The length loads before pressing play so hosts can see how long the show runs.
+ *
+ * `skipSeconds` hides an intro: playback starts that far in, and the clock,
+ * length and seek bar all count from there, so the show appears to start at 0:00.
  */
-export function AudioPlayer({ src, title }: { src: string; title: string }) {
+export function AudioPlayer({ src, title, skipSeconds = 0 }: { src: string; title: string; skipSeconds?: number }) {
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [duration, setDuration] = useState<number | null>(null);
-  const [time, setTime] = useState(0);
+  const [rawDuration, setRawDuration] = useState<number | null>(null);
+  const [rawTime, setRawTime] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [buffering, setBuffering] = useState(false);
   const [failed, setFailed] = useState(false);
+
+  // Only skip when the file is clearly longer than the intro.
+  const skipFor = (fileDuration: number | null | undefined) =>
+    fileDuration != null && Number.isFinite(fileDuration) && fileDuration > skipSeconds + 5 ? skipSeconds : 0;
+  const skip = skipFor(rawDuration);
 
   // Stop the sound when the page is left (pages can stay mounted in the background).
   useEffect(() => {
@@ -30,10 +38,18 @@ export function AudioPlayer({ src, title }: { src: string; title: string }) {
     return () => audio?.pause();
   }, []);
 
+  /** Moves to the start of the show (just after the intro). */
+  const toStart = (audio: HTMLAudioElement) => {
+    const s = skipFor(audio.duration);
+    audio.currentTime = s;
+    setRawTime(s);
+  };
+
   const toggle = () => {
     const audio = audioRef.current;
     if (!audio) return;
     if (audio.paused) {
+      if (audio.currentTime < skipFor(audio.duration)) toStart(audio);
       setBuffering(true);
       audio.play().catch(() => {
         setBuffering(false);
@@ -48,17 +64,20 @@ export function AudioPlayer({ src, title }: { src: string; title: string }) {
     const audio = audioRef.current;
     if (!audio) return;
     audio.pause();
-    audio.currentTime = 0;
-    setTime(0);
+    toStart(audio);
   };
 
+  /** `value` is a position on the show's own clock (0 = end of the intro). */
   const seek = (value: number) => {
     const audio = audioRef.current;
     if (!audio || !Number.isFinite(value)) return;
-    audio.currentTime = value;
-    setTime(value);
+    const target = skipFor(audio.duration) + value;
+    audio.currentTime = target;
+    setRawTime(target);
   };
 
+  const duration = rawDuration != null && Number.isFinite(rawDuration) ? rawDuration - skip : null;
+  const time = Math.max(0, Math.min(rawTime - skip, duration ?? Infinity));
   const known = duration != null && Number.isFinite(duration) && duration > 0;
   const progress = known ? Math.min(100, (time / duration) * 100) : 0;
 
@@ -143,11 +162,26 @@ export function AudioPlayer({ src, title }: { src: string; title: string }) {
 
       <audio
         ref={audioRef}
-        src={src}
+        // The #t= hint lets browsers fetch from the right spot first; the handlers below make sure of it.
+        src={skipSeconds > 0 ? `${src}#t=${skipSeconds}` : src}
         preload="metadata"
-        onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-        onDurationChange={(e) => setDuration(e.currentTarget.duration)}
-        onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
+        onLoadedMetadata={(e) => {
+          const audio = e.currentTarget;
+          setRawDuration(audio.duration);
+          const s = skipFor(audio.duration);
+          if (Math.abs(audio.currentTime - s) > 0.5 && audio.paused) toStart(audio);
+        }}
+        onDurationChange={(e) => setRawDuration(e.currentTarget.duration)}
+        onTimeUpdate={(e) => {
+          const audio = e.currentTarget;
+          const s = skipFor(audio.duration);
+          // Never let the intro play, whatever the browser did.
+          if (!audio.paused && audio.currentTime < s - 0.25) {
+            audio.currentTime = s;
+            return;
+          }
+          setRawTime(audio.currentTime);
+        }}
         onPlay={() => setPlaying(true)}
         onPlaying={() => setBuffering(false)}
         onWaiting={() => setBuffering(true)}
@@ -156,9 +190,10 @@ export function AudioPlayer({ src, title }: { src: string; title: string }) {
           setPlaying(false);
           setBuffering(false);
         }}
-        onEnded={() => {
+        onEnded={(e) => {
           setPlaying(false);
           setBuffering(false);
+          toStart(e.currentTarget);
         }}
         onError={() => setFailed(true)}
       />

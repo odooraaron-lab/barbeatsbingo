@@ -43,3 +43,9 @@ export function filesBySlot<T extends FileLike>(files: T[]) {
 export function findTrackList<T extends { kind: FileKind }>(files: T[]) {
   return files.find((f) => f.kind === "host_sheet") ?? null;
 }
+
+/**
+ * Every show video starts with a 30-second intro. The audio player on the show
+ * page skips this much of it and counts the show from there. Downloads are untouched.
+ */
+export const INTRO_SKIP_SECONDS = 28;
