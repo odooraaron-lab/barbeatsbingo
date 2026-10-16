@@ -3,7 +3,7 @@ import { Download, Play } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { getPlaylist } from "@/lib/library";
 import { formatBytes, kindLabel } from "@/lib/format";
-import { INTRO_SKIP_SECONDS, findTrackList } from "@/lib/show-files";
+import { INTRO_SKIP_SECONDS, downloadableFiles, findPlayable, findTrackList } from "@/lib/show-files";
 import { Breadcrumbs } from "@/components/portal/breadcrumbs";
 import { FileIcon } from "@/components/portal/file-icon";
 import { TrackListViewer } from "@/components/portal/track-list-viewer";
@@ -19,11 +19,19 @@ export default async function ShowPage({ params }: { params: Promise<{ genre: st
   const user = await requireUser();
   const data = await getPlaylist(user, genre, showSlug);
   if (!data) notFound();
-  const { category, playlist: show, files } = data;
+  const { category, playlist: show } = data;
+  const allFiles = data.files;
+  const files = downloadableFiles(allFiles);
   const trackList = findTrackList(files);
+  // Prefer the small MP3 preview: it starts far faster than streaming the video.
+  const playable = findPlayable(allFiles);
   const showFile = files.find((f) => f.kind === "video" || f.kind === "audio") ?? null;
-  const player = showFile && (
-    <AudioPlayer src={`/api/files/${showFile.id}/stream`} title={showFile.title} skipSeconds={INTRO_SKIP_SECONDS} />
+  const player = playable && (
+    <AudioPlayer
+      src={`/api/files/${playable.id}/stream`}
+      title={(showFile ?? playable).title}
+      skipSeconds={INTRO_SKIP_SECONDS}
+    />
   );
 
   return (

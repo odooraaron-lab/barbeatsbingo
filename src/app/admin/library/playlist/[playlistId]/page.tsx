@@ -86,8 +86,9 @@ export default async function PlaylistAdminPage({ params }: { params: Promise<{ 
               Show files from Zoho
             </h2>
             <p className="mt-1 text-sm text-mist">
-              In WorkDrive, share each file with an external link that allows downloads, then paste the three links
-              here. Customers download each one separately, and the track list also shows on the show page.
+              In WorkDrive, share each file with an external link that allows downloads, then paste the links here.
+              Customers download the first three separately, and the track list also shows on the show page. The
+              optional audio preview makes the show page&apos;s player start much faster.
             </p>
             <div className="mt-5">
               <ActionForm

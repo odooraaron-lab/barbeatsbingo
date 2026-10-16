@@ -92,6 +92,21 @@ In Vercel, **Settings → Domains → Add** `barbeatsbingo.com` and `www.barbeat
 
 Customers see three download buttons, and the track list PDF is drawn on the page so they can read it without downloading. Rename a file or change its order under **Files**.
 
+**Audio previews (makes the player start fast)**
+
+The player on each show page can play straight from the show video, but that means streaming the whole video (around 670 MB) just to hear it, so it's slow to start and to skip around. A small MP3 of the show is about 30 times smaller (roughly 1 MB per minute).
+
+1. Make the MP3s with `tools/make_previews.py` on your computer. It needs Python and ffmpeg; the easy way to get ffmpeg is `pip install imageio-ffmpeg`. Then run:
+
+   ```
+   python tools/make_previews.py "D:\path\to\your\shows" --only "Play Now"
+   ```
+
+   It writes `<video name> - Preview.mp3` next to each show video, lists what it found and asks before starting. It skips shows that already have a preview, so run it again whenever you add shows. `--only` limits it to the show videos if the folder also holds individual music videos.
+2. Upload the MP3s to WorkDrive (or let WorkDrive sync them), share each with an external link, and paste it into the show's **Audio preview** box.
+
+The player uses the preview whenever a show has one, and the video otherwise. Customers don't see the preview as a download. Keep the whole show in the preview, intro included: the player skips the first 28 seconds itself (change `INTRO_SKIP_SECONDS` in `src/lib/show-files.ts` if your intros change).
+
 **Customers → Add a customer**, then choose what they can download:
 
 - **Everything**: includes anything added later.

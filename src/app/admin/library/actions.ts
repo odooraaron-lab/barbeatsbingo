@@ -238,7 +238,7 @@ export async function saveShowFiles(playlistId: string, _prev: ActionResult, fd:
       warnings.push(
         `${p.slot.label}: this link opens a Zoho page instead of the file. Share the file itself (not its folder) and allow downloads.`,
       );
-    } else if (check && p.slot.key !== "show" && !check.isPdf) {
+    } else if (check && (p.slot.key === "scorecards" || p.slot.key === "tracklist") && !check.isPdf) {
       warnings.push(`${p.slot.label}: this link doesn't seem to be a PDF.`);
     }
 

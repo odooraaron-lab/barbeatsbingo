@@ -1,4 +1,4 @@
-import { ClipboardList, File, FileArchive, FileText, Film, Grid3x3, Music } from "lucide-react";
+import { ClipboardList, File, FileArchive, FileText, Film, Grid3x3, Headphones, Music } from "lucide-react";
 import type { FileKind } from "@/db/schema";
 
 const ICONS = {
@@ -9,6 +9,7 @@ const ICONS = {
   document: FileText,
   archive: FileArchive,
   other: File,
+  preview: Headphones,
 } as const;
 
 const TONES: Record<FileKind, string> = {
@@ -19,6 +20,7 @@ const TONES: Record<FileKind, string> = {
   document: "bg-white/10 text-mist",
   archive: "bg-white/10 text-mist",
   other: "bg-white/10 text-mist",
+  preview: "bg-tang/20 text-tang",
 };
 
 export function FileIcon({ kind, size = 22 }: { kind: FileKind; size?: number }) {

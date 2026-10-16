@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, ilike, inArray, max, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, max, ne, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { accessGrants, categories, files, playlists } from "@/db/schema";
 import { accessHasExpired } from "./auth";
@@ -219,7 +219,7 @@ export async function searchLibrary(user: SessionUser, query: string) {
       .from(files)
       .innerJoin(playlists, eq(files.playlistId, playlists.id))
       .innerJoin(categories, eq(playlists.categoryId, categories.id))
-      .where(and(base, or(ilike(files.title, like), ilike(files.fileName, like))))
+      .where(and(base, ne(files.kind, "preview"), or(ilike(files.title, like), ilike(files.fileName, like))))
       .orderBy(desc(files.createdAt))
       .limit(30),
   ]);

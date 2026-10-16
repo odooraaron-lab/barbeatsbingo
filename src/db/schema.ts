@@ -25,6 +25,8 @@ export const fileKind = pgEnum("file_kind", [
   "document",
   "archive",
   "other",
+  // A small MP3 of a show, used only by the audio player (not listed as a download).
+  "preview",
 ]);
 
 export const fileSource = pgEnum("file_source", ["storage", "link"]);

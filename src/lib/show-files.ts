@@ -20,6 +20,12 @@ export const SHOW_SLOTS = [
     hint: "The track list PDF. Customers also see it on the show page.",
     kinds: ["host_sheet"] as FileKind[],
   },
+  {
+    key: "preview",
+    label: "Audio preview (optional)",
+    hint: "A small MP3 of the show for the player on the show page. It starts much faster than the video. Not shown as a download.",
+    kinds: ["preview"] as FileKind[],
+  },
 ] as const;
 
 export type SlotKey = (typeof SHOW_SLOTS)[number]["key"];
@@ -42,6 +48,18 @@ export function filesBySlot<T extends FileLike>(files: T[]) {
 
 export function findTrackList<T extends { kind: FileKind }>(files: T[]) {
   return files.find((f) => f.kind === "host_sheet") ?? null;
+}
+
+/** What the show page's player should play: the MP3 preview if there is one, otherwise the show file. */
+export function findPlayable<T extends { kind: FileKind }>(files: T[]) {
+  return (
+    files.find((f) => f.kind === "preview") ?? files.find((f) => f.kind === "video" || f.kind === "audio") ?? null
+  );
+}
+
+/** Files customers can download (previews are only for the player). */
+export function downloadableFiles<T extends { kind: FileKind }>(files: T[]) {
+  return files.filter((f) => f.kind !== "preview");
 }
 
 /**

@@ -14,7 +14,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   if (!user) return new NextResponse("Log in to play this file.", { status: 401 });
 
   const file = UUID.test(id) ? await getDownloadableFile(user, id) : null;
-  if (!file || (file.kind !== "video" && file.kind !== "audio")) {
+  if (!file || !["video", "audio", "preview"].includes(file.kind)) {
     return new NextResponse("This file isn't available on your account.", { status: 404 });
   }
 

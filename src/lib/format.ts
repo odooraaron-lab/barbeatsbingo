@@ -65,6 +65,7 @@ export const FILE_KINDS: { value: FileKind; label: string }[] = [
   { value: "document", label: "Document" },
   { value: "archive", label: "Zip / archive" },
   { value: "other", label: "Other" },
+  { value: "preview", label: "Audio preview" },
 ];
 
 export function kindLabel(kind: FileKind) {
@@ -77,7 +78,7 @@ export function guessKind(fileName: string, contentType = ""): FileKind {
   if (contentType.startsWith("video/") || ["mp4", "mov", "m4v", "mkv", "avi", "wmv", "webm"].includes(ext))
     return "video";
   if (contentType.startsWith("audio/") || ["mp3", "wav", "m4a", "aac", "flac", "ogg"].includes(ext))
-    return "audio";
+    return /preview/.test(name) ? "preview" : "audio";
   if (["zip", "rar", "7z"].includes(ext)) return "archive";
   if (/score\s*card|scorecard|cards?\b/.test(name)) return "scorecards";
   if (/host|answer|track\s*list|tracklist/.test(name)) return "host_sheet";
