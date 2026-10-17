@@ -40,8 +40,8 @@ export function SiteHeader() {
 
   return (
     <header className="relative z-30 bg-black/95">
-      <div className="wrap flex items-center gap-6 py-3">
-        <Logo className="w-[150px] md:w-[178px]" />
+      <div className="wrap flex items-center gap-3 py-3 sm:gap-6">
+        <Logo className="w-[124px] min-[370px]:w-[150px] md:w-[178px]" />
 
         <nav aria-label="Main" className="ml-auto hidden items-center gap-1 lg:flex">
           {NAV.map((item) => (
@@ -95,9 +95,13 @@ export function SiteHeader() {
           </Link>
         </div>
 
+        <Link href="/contact-us" className="btn btn-red btn-sm ml-auto px-3 min-[370px]:px-[0.85rem] sm:hidden">
+          Contact us
+        </Link>
+
         <button
           type="button"
-          className="ml-auto rounded-md p-2 text-white sm:ml-0 lg:hidden"
+          className="rounded-md p-2 text-white sm:ml-0 lg:hidden"
           aria-expanded={open}
           aria-controls="mobile-menu"
           aria-label={open ? "Close menu" : "Open menu"}

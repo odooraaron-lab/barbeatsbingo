@@ -2,8 +2,8 @@ import Link from "next/link";
 
 export function CallToAction() {
   return (
-    <section className="wrap mt-28">
-      <div className="relative overflow-hidden rounded-[28px] bg-red px-7 py-14 sm:px-14">
+    <section className="wrap mt-20 sm:mt-28">
+      <div className="relative overflow-hidden rounded-[28px] bg-red px-6 py-12 shadow-[0_0_0_1.5px_rgb(255_150_160/0.55),0_0_60px_-10px_rgb(255_58_85/0.7)] sm:px-14 sm:py-14">
         <div
           aria-hidden
           className="absolute -right-24 -top-24 h-72 w-72 rounded-full border-[28px] border-white/10 sm:h-96 sm:w-96"
