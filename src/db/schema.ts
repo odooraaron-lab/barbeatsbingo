@@ -146,6 +146,9 @@ export const files = pgTable(
     // Whether phones can play the link directly: it answers byte-range requests with an
     // audio/video type. When false, the player's audio is relayed through the site instead.
     streamDirect: boolean("stream_direct"),
+    // Whether the link answers byte-range requests at all. Relaying a big video only works
+    // when it does (otherwise every jump would mean reading the file from the start).
+    byteRanges: boolean("byte_ranges"),
     // What we read from the file itself: the songs on a call list, the cards in a scorecards PDF.
     meta: jsonb("meta").$type<FileMeta>(),
     sortOrder: integer("sort_order").notNull().default(0),

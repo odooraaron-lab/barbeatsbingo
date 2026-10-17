@@ -153,6 +153,7 @@ export async function applyShowLinks(show: { id: string; name: string }, input: 
     p.current.externalUrl !== p.url ||
     !p.current.fileName ||
     (p.slot.key === "preview" && (p.current.streamDirect === null || p.current.durationSeconds === null)) ||
+    ((p.slot.key === "show" || p.slot.key === "preview") && p.current.byteRanges === null) ||
     (p.slot.key === "tracklist" && !p.current.meta?.callList);
 
   // Check new or changed links so we can grab the real file name and spot mistakes.
@@ -222,6 +223,7 @@ export async function applyShowLinks(show: { id: string; name: string }, input: 
       sizeBytes: check?.size ?? (sameLink ? (p.current?.sizeBytes ?? null) : null),
       durationSeconds: check?.reachable ? check.durationSeconds : sameLink ? (p.current?.durationSeconds ?? null) : null,
       streamDirect: check?.reachable ? check.streamDirect : sameLink ? (p.current?.streamDirect ?? null) : null,
+      byteRanges: check?.reachable ? check.byteRanges : sameLink ? (p.current?.byteRanges ?? null) : null,
       meta,
       sortOrder: p.sortOrder,
     };

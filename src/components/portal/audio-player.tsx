@@ -46,6 +46,10 @@ export function AudioPlayer({
   const [lengthLater, setLengthLater] = useState(false);
   // True from pressing Play on an unloaded file until it's past the intro; it stays muted meanwhile.
   const startingRef = useRef(false);
+  // Never stays muted for long: if the jump past the intro can't happen, better to hear the intro.
+  const unmuteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Loading for a long time after Play: say so, rather than just a spinner.
+  const [slow, setSlow] = useState(false);
   // A jump asked for before the file had loaded (e.g. a song tapped on the call list).
   const pendingSeekRef = useRef<number | null>(null);
   const session = useShowSession();
@@ -61,8 +65,20 @@ export function AudioPlayer({
   // Stop the sound when the page is left (pages can stay mounted in the background).
   useEffect(() => {
     const audio = audioRef.current;
-    return () => audio?.pause();
+    return () => {
+      audio?.pause();
+      if (unmuteTimerRef.current) clearTimeout(unmuteTimerRef.current);
+    };
   }, []);
+
+  useEffect(() => {
+    if (!(playing && buffering)) return;
+    const timer = setTimeout(() => setSlow(true), 12000);
+    return () => {
+      clearTimeout(timer);
+      setSlow(false);
+    };
+  }, [playing, buffering]);
 
   // The page's HTML starts loading the audio before the page's scripts are running, so on a
   // fast connection its details can arrive before anything is listening. Replay that moment,
@@ -88,17 +104,22 @@ export function AudioPlayer({
     setRawTime(s);
   };
 
-  /** Un-mutes once playback is safely past the intro. */
-  const releaseIfPastIntro = (audio: HTMLAudioElement) => {
-    if (startingRef.current && audio.currentTime >= skipFor(lengthOf(audio)) - 0.25) {
-      startingRef.current = false;
-      audio.muted = false;
-    }
-  };
-
   const cancelStarting = (audio: HTMLAudioElement) => {
     startingRef.current = false;
     audio.muted = false;
+    if (unmuteTimerRef.current) clearTimeout(unmuteTimerRef.current);
+    unmuteTimerRef.current = null;
+  };
+
+  /** Un-mutes once playback is safely past the intro. */
+  const releaseIfPastIntro = (audio: HTMLAudioElement) => {
+    if (startingRef.current && audio.currentTime >= skipFor(lengthOf(audio)) - 0.25) cancelStarting(audio);
+  };
+
+  /** Whether the browser can jump to `time` (it can't if the link doesn't allow it). */
+  const canReach = (audio: HTMLAudioElement, time: number) => {
+    const { seekable } = audio;
+    return seekable.length > 0 && seekable.end(seekable.length - 1) >= time;
   };
 
   const play = (audio: HTMLAudioElement) => {
@@ -321,6 +342,11 @@ export function AudioPlayer({
               <Square size={16} aria-hidden /> Stop
             </button>
           </div>
+          {slow && (
+            <p className="mt-3 text-sm text-mist" role="status">
+              Still loading. This can take a little while on a slow connection.
+            </p>
+          )}
           {now && songs && (
             <p className="mt-4 flex min-w-0 items-start gap-2 text-sm" aria-live="polite">
               <span className="grid h-6 w-6 shrink-0 place-items-center rounded bg-white font-bold text-ink" aria-hidden>
@@ -363,8 +389,8 @@ export function AudioPlayer({
         onTimeUpdate={(e) => {
           const audio = e.currentTarget;
           const s = skipFor(lengthOf(audio));
-          // Never let the intro play, whatever the browser did.
-          if (!audio.paused && audio.currentTime < s - 0.25) {
+          // Never let the intro play, whatever the browser did (as long as it can jump past it).
+          if (!audio.paused && audio.currentTime < s - 0.25 && canReach(audio, s)) {
             audio.currentTime = s;
             return;
           }
@@ -374,8 +400,15 @@ export function AudioPlayer({
         onSeeked={(e) => releaseIfPastIntro(e.currentTarget)}
         onPlay={() => setPlaying(true)}
         onPlaying={(e) => {
+          const audio = e.currentTarget;
           setBuffering(false);
-          releaseIfPastIntro(e.currentTarget);
+          releaseIfPastIntro(audio);
+          if (startingRef.current && !unmuteTimerRef.current) {
+            unmuteTimerRef.current = setTimeout(() => {
+              unmuteTimerRef.current = null;
+              if (startingRef.current) cancelStarting(audio);
+            }, 2500);
+          }
         }}
         onWaiting={() => setBuffering(true)}
         onCanPlay={() => setBuffering(false)}

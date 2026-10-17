@@ -15,6 +15,8 @@ export type LinkCheck = {
   contentType: string;
   /** Phones can stream it straight from the link: it supports byte ranges and has an audio/video type. */
   streamDirect: boolean;
+  /** The link answers byte-range requests (needed to relay a big file a piece at a time). */
+  byteRanges: boolean;
   /** Playing time, for MP3s. */
   durationSeconds: number | null;
 };
@@ -95,6 +97,7 @@ export async function checkLink(url: string): Promise<LinkCheck> {
     size: null,
     contentType: "",
     streamDirect: false,
+    byteRanges: false,
     durationSeconds: null,
   };
   try {
@@ -116,6 +119,7 @@ export async function checkLink(url: string): Promise<LinkCheck> {
       size,
       contentType: type.split(";")[0].trim(),
       streamDirect: rangeOk && /^(audio|video)\//.test(type),
+      byteRanges: rangeOk,
       durationSeconds:
         !isHtml && looksLikeMp3(head, type, fileName) ? await readMp3Duration(url, head, size, rangeOk) : null,
     };

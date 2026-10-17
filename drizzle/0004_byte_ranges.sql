@@ -1,0 +1,1 @@
+ALTER TABLE "files" ADD COLUMN "byte_ranges" boolean;

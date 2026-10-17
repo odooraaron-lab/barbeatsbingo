@@ -7,22 +7,24 @@ import { getDownloadableFile } from "@/lib/library";
 import { presignDownload, storageConfigured } from "@/lib/storage";
 import { directDownloadUrl } from "@/lib/format";
 import { checkLink } from "@/lib/links";
-import { audioTypeFor, relayAudioRange } from "@/lib/media-relay";
+import { mediaTypeFor, relayAudioRange } from "@/lib/media-relay";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Gives the audio player the file after checking access. Playing isn't counted as a download.
 //
-// Usually this just points the browser at the file's own address. For MP3 links that
-// iPhones can't stream directly (no byte ranges, or not labelled as audio), the
-// audio is relayed through here instead.
+// Usually this just points the browser at the file's own address. iPhones are fussier
+// than computers: they only play links that answer byte-range requests and say they're
+// audio or video. Zoho links often say "a file to download" instead, so for those the
+// sound is relayed through here, labelled properly. A big video is only relayed when its
+// link does byte ranges (otherwise every jump would mean reading it from the start).
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await getSessionUser();
   if (!user) return new NextResponse("Log in to play this file.", { status: 401 });
 
   const file = UUID.test(id) ? await getDownloadableFile(user, id) : null;
-  if (!file || !["video", "audio", "preview"].includes(file.kind)) {
+  if (!file || (file.kind !== "video" && file.kind !== "audio" && file.kind !== "preview")) {
     return new NextResponse("This file isn't available on your account.", { status: 404 });
   }
 
@@ -33,27 +35,28 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   } else if (file.source === "link" && file.externalUrl) {
     target = directDownloadUrl(file.externalUrl);
 
-    if (file.kind === "preview") {
-      let direct = file.streamDirect;
-      if (direct === null) {
-        // Saved before links were checked for this: check once and remember.
-        const check = await checkLink(target);
-        if (check.reachable) {
-          direct = check.streamDirect;
-          await db
-            .update(files)
-            .set({
-              streamDirect: direct,
-              durationSeconds: file.durationSeconds ?? check.durationSeconds,
-              sizeBytes: file.sizeBytes ?? check.size,
-            })
-            .where(eq(files.id, file.id));
-        }
+    let { streamDirect: direct, byteRanges: ranges } = file;
+    if (direct === null || ranges === null) {
+      // Saved before links were checked for this: check once and remember.
+      const check = await checkLink(target);
+      if (check.reachable) {
+        direct = check.streamDirect;
+        ranges = check.byteRanges;
+        await db
+          .update(files)
+          .set({
+            streamDirect: direct,
+            byteRanges: ranges,
+            durationSeconds: file.durationSeconds ?? check.durationSeconds,
+            sizeBytes: file.sizeBytes ?? check.size,
+          })
+          .where(eq(files.id, file.id));
       }
-      if (direct === false) {
-        const relayed = await relayAudioRange(request, target, audioTypeFor(file.fileName), file.sizeBytes);
-        if (relayed) return relayed;
-      }
+    }
+    // MP3s for the player are small enough to relay even from links without byte ranges.
+    if (direct === false && (ranges || file.kind === "preview")) {
+      const relayed = await relayAudioRange(request, target, mediaTypeFor(file.fileName, file.kind), file.sizeBytes);
+      if (relayed) return relayed;
     }
   }
   if (!target) return new NextResponse("This file can't be played right now.", { status: 503 });

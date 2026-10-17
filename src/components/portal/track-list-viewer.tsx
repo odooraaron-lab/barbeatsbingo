@@ -36,8 +36,10 @@ export function TrackListViewer({ src, downloadHref, title }: { src: string; dow
 
     (async () => {
       try {
+        // Older iPhones need a few things filled in before pdf.js can run (in the page and its worker).
+        await import("@/lib/pdf-compat.mjs");
         const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-        pdfjs.GlobalWorkerOptions.workerSrc = `/pdfjs/pdf.worker.min.mjs?v=${pdfjs.version}`;
+        pdfjs.GlobalWorkerOptions.workerSrc = `/pdfjs/pdf.worker.compat.mjs?v=${pdfjs.version}`;
         const task = pdfjs.getDocument({ url: src });
         destroy = () => void task.destroy();
         const doc = await task.promise;

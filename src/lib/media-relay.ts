@@ -1,12 +1,12 @@
 import "server-only";
 
 /**
- * Relays a byte range of an audio file from its link to the browser.
+ * Relays a byte range of a show's audio (or video) file from its link to the browser.
  *
- * iPhones only play audio that is served in byte ranges ("206 Partial Content")
- * with an audio type. When a share link doesn't do that, the player's audio goes
- * through here instead: we ask the link for the range, or cut it out ourselves if
- * the link only sends whole files, and label it as audio.
+ * iPhones only play media that is served in byte ranges ("206 Partial Content")
+ * with an audio or video type. When a share link doesn't do that, the player's
+ * sound goes through here instead: we ask the link for the range, or cut it out
+ * ourselves if the link only sends whole files, and label it properly.
  *
  * Each answer is at most CHUNK bytes, which keeps it under Vercel's response size
  * limit; browsers ask for the next piece as they play.
@@ -15,17 +15,23 @@ import "server-only";
 const CHUNK = 4 * 1024 * 1024;
 const USER_AGENT = "Mozilla/5.0 (compatible; BarBeatsBingoPortal/1.0)";
 
-const AUDIO_TYPES: Record<string, string> = {
+const MEDIA_TYPES: Record<string, string> = {
   mp3: "audio/mpeg",
   m4a: "audio/mp4",
   aac: "audio/aac",
   wav: "audio/wav",
   ogg: "audio/ogg",
   flac: "audio/flac",
+  // Show videos: the player only uses their sound, but phones need to know what they are.
+  mp4: "video/mp4",
+  m4v: "video/mp4",
+  mov: "video/quicktime",
+  webm: "video/webm",
 };
 
-export function audioTypeFor(fileName: string) {
-  return AUDIO_TYPES[fileName.split(".").pop()?.toLowerCase() ?? ""] ?? "audio/mpeg";
+/** The type to label a relayed file with, from its name (or what it's for, if the name doesn't say). */
+export function mediaTypeFor(fileName: string, kind: "video" | "audio" | "preview") {
+  return MEDIA_TYPES[fileName.split(".").pop()?.toLowerCase() ?? ""] ?? (kind === "video" ? "video/mp4" : "audio/mpeg");
 }
 
 /** Parses a single "bytes=start-end" range. Suffix and multi-part ranges aren't used by media players. */

@@ -225,6 +225,7 @@ export async function updateFile(id: string, _prev: ActionResult, fd: FormData):
       const check = await checkLink(directDownloadUrl(values.externalUrl));
       values.durationSeconds = check.reachable ? check.durationSeconds : null;
       values.streamDirect = check.reachable ? check.streamDirect : null;
+      values.byteRanges = check.reachable ? check.byteRanges : null;
       if (check.size) values.sizeBytes = check.size;
     }
   }
