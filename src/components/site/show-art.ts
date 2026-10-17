@@ -1,12 +1,15 @@
 /**
  * Drawing data for the home page scene: the crowd's silhouettes, built from a few
- * measurements so each person looks different, and the "bingo" neon tube lettering.
+ * measurements so each person looks different, the performers on the TV, and the
+ * neon sign's tube lettering.
  *
- * People are drawn from behind, in units where a head is 16 wide. The shoulder line
- * is at y = 0, the crown about 31 above it, and the body runs off the bottom at y = 52.
+ * People are drawn from behind, in units where a head is about 16 wide. The shoulder
+ * line is at y = 0, the nape of the neck at y = -9.5, the crown about 30 above the
+ * shoulders, and the body runs off the bottom at y = 54. Outlines are smooth curves
+ * through a few key points on one side, mirrored for the other.
  */
 
-export type Hair = "buzz" | "short" | "crop" | "long" | "bob" | "bun" | "curls" | "beanie";
+export type Hair = "buzz" | "short" | "crop" | "long" | "swept" | "bob" | "bun" | "curls" | "beanie";
 
 export type PersonSpec = {
   hair: Hair;
@@ -29,27 +32,9 @@ export type PersonSpec = {
 };
 
 type Pt = [number, number];
-type Seg = [Pt, Pt, Pt];
 
 const f = (n: number) => (Math.round(n * 10) / 10).toString();
 const pt = ([x, y]: Pt) => `${f(x)} ${f(y)}`;
-
-/** A path from a start point and cubic segments. */
-function path(start: Pt, segs: Seg[]) {
-  return `M${pt(start)}` + segs.map(([a, b, c]) => `C${pt(a)} ${pt(b)} ${pt(c)}`).join("");
-}
-
-/** Mirrors a right-hand outline (top to bottom) and returns the left side (bottom to top). */
-function mirrorBack(start: Pt, segs: Seg[]): Seg[] {
-  const m = ([x, y]: Pt): Pt => [-x, y];
-  const pts: Pt[] = [start, ...segs.map((s) => s[2])];
-  const out: Seg[] = [];
-  for (let i = segs.length - 1; i >= 0; i--) {
-    const [a, b] = segs[i];
-    out.push([m(b), m(a), m(pts[i])]);
-  }
-  return out;
-}
 
 function transform(p: Pt, angle: number, dx: number, dy: number, s = 1): Pt {
   const r = (angle * Math.PI) / 180;
@@ -57,182 +42,223 @@ function transform(p: Pt, angle: number, dx: number, dy: number, s = 1): Pt {
   return [x * Math.cos(r) - y * Math.sin(r) + dx, x * Math.sin(r) + y * Math.cos(r) + dy];
 }
 
-function moveSegs(start: Pt, segs: Seg[], angle: number, dx: number, dy: number, s = 1) {
-  const t = (p: Pt) => transform(p, angle, dx, dy, s);
-  return { start: t(start), segs: segs.map(([a, b, c]) => [t(a), t(b), t(c)] as Seg) };
+/** A smooth closed outline through the points (Catmull-Rom curves), drawn clockwise. */
+function smooth(points: Pt[]): string {
+  const n = points.length;
+  const at = (i: number) => points[(i + n) % n];
+  let d = `M${pt(points[0])}`;
+  for (let i = 0; i < n; i++) {
+    const [p0, p1, p2, p3] = [at(i - 1), at(i), at(i + 1), at(i + 2)];
+    const c1: Pt = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+    const c2: Pt = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    d += `C${pt(c1)} ${pt(c2)} ${pt(p2)}`;
+  }
+  return d + "Z";
+}
+
+/** A clockwise ellipse (so it joins the outlines it overlaps). */
+function oval([cx, cy]: Pt, rx: number, ry: number, rot = 0): string {
+  const r = (rot * Math.PI) / 180;
+  const a: Pt = [cx + rx * Math.cos(r), cy + rx * Math.sin(r)];
+  const b: Pt = [cx - rx * Math.cos(r), cy - rx * Math.sin(r)];
+  return `M${pt(a)}A${f(rx)} ${f(ry)} ${f(rot)} 1 1 ${pt(b)}A${f(rx)} ${f(ry)} ${f(rot)} 1 1 ${pt(a)}Z`;
 }
 
 /**
- * Body: neck, the slope of the shoulders and the upper arms. Hands are out in front
- * (a drink, a pen, the table), so below the elbows the outline steps in to the waist.
- * The two sides can differ, for someone turned a little or with a shoulder dropped.
+ * One side of the body, from the neck down: a short neck, a smooth turn into the
+ * slope of the shoulder (the trapezius), the round of the shoulder and the arm.
  */
-function bodySide(s: number, neck: number, slope: number): Seg[] {
+function bodySide(s: number, n: number, slope: number): Pt[] {
+  // The shoulder line drops `drop` per unit outwards: men about 23 degrees, women steeper.
+  const drop = 0.42 + slope * 0.1;
+  const tip: Pt = [s - 0.2, -1.4 + slope * 0.5];
+  const along = (x: number): Pt => [x, tip[1] - drop * (tip[0] - x)];
   return [
-    // the top of the neck tucks up inside the head
-    [[neck * 0.4, -13], [neck * 0.8, -13], [neck, -13]],
-    [[neck, -11.6], [neck + 0.1, -10.6], [neck + 0.3, -9.6]],
-    // trapezius: one long slope from high on the neck out to the shoulder
-    [[neck + 1.1, -6], [s - 10, -3 + slope * 0.45], [s - 4.6, -1.4 + slope * 0.8]],
-    [[s - 2, -0.7 + slope * 0.95], [s - 0.6, -0.2 + slope], [s + 0.6, 0.4 + slope]],
+    [n, -8.6],
+    [n + 0.25, -7.1],
+    [n + 1.2, -5.9 + slope * 0.15],
+    along(n + 3.4),
+    along(n + 7.4),
+    tip,
     // the round of the shoulder
-    [[s + 2.3, 1.6 + slope], [s + 3.1, 4.2 + slope], [s + 3.1, 7.6 + slope]],
-    // upper arm, down to the elbow
-    [[s + 3.1, 13], [s + 2.8, 19.5], [s + 2.5, 25]],
-    [[s + 2.4, 27.2], [s + 1.8, 28.9], [s + 0.3, 29.6]],
-    // forearms are in front, so the waist shows below the elbow
-    [[s - 1.6, 30.6], [s - 3, 33.5], [s - 3.4, 38.5]],
-    [[s - 3.6, 43], [s - 3.6, 48], [s - 3.6, 52]],
+    [s + 1.7, tip[1] + 1.1],
+    [s + 2.7, tip[1] + 3.2],
+    [s + 3, tip[1] + 6.2],
+    // the arm, hanging, the body narrowing a little below it
+    [s + 2.9, 14],
+    [s + 2.4, 25],
+    [s + 1.9, 36],
+    [s + 1.6, 54],
   ];
 }
 
-function body(right: number, left: number, neck: number, slopeRight: number, slopeLeft: number) {
-  const r = bodySide(right, neck, slopeRight);
-  const l = bodySide(left, neck, slopeLeft);
-  const start: Pt = [0, -13];
-  const end = r[r.length - 1][2];
-  const lEnd = l[l.length - 1][2];
-  const across: Seg[] = [[[end[0] * 0.5, end[1]], [-lEnd[0] * 0.5, lEnd[1]], [-lEnd[0], lEnd[1]]]];
-  return path(start, [...r, ...across, ...mirrorBack(start, l)]) + "Z";
-}
-
-/** The head's outline (right side, from the crown down to the neck), by hair style. Nape at (0, 0). */
-function headRight(hair: Hair): { start: Pt; segs: Seg[]; extra?: string } {
-  const ear: Seg[] = [
-    [[8.15, -10.9], [8.2, -10.5], [8.25, -10.2]],
-    [[8.95, -10.8], [9.45, -9.6], [9.35, -8.2]],
-    [[9.25, -6.8], [8.95, -5.2], [8.3, -4.6]],
-  ];
-  const nape: Seg[] = [
-    [[7.6, -4], [6.9, -2.9], [6.4, -1.5]],
-    [[6.1, -0.6], [5.9, 0.4], [5.8, 2]],
+/** Right side of the head, by hairstyle, from the crown down. Nape at (0, 0). */
+function headSide(hair: Hair): Pt[] {
+  // The skull from behind: round on top, widest a third of the way down, tapering to the neck.
+  const skull: Pt[] = [
+    [0, -19.8],
+    [3.7, -19.4],
+    [6.4, -17.9],
+    [7.9, -15.4],
+    [8.5, -12.4],
+    [8.4, -9.4],
+    [7.9, -6.6],
+    [7.2, -4.1],
+    [6.6, -2.2],
   ];
   switch (hair) {
     case "buzz":
-      return {
-        start: [0, -19.4],
-        segs: [[[4.5, -19.4], [8.1, -16], [8.1, -11.5]], ...ear, ...nape],
-      };
+      return skull;
     case "short":
-      return {
-        start: [0, -20.7],
-        segs: [
-          [[2.6, -20.9], [4.6, -20.4], [6.2, -18.8]],
-          [[7.8, -17.2], [8.8, -15], [8.7, -11.4]],
-          ...ear,
-          ...nape,
-        ],
-      };
+      return [[0, -20.7], [4.2, -20.3], [7, -18.6], [8.6, -15.6], [8.9, -12.4], [8.5, -9.4], ...skull.slice(6)];
     case "crop":
-      // a bit of height and texture on top
-      return {
-        start: [-0.6, -21.4],
-        segs: [
-          [[1.4, -22.1], [2.6, -21.2], [3.8, -21.4]],
-          [[5.6, -21.4], [6.6, -19.6], [7.6, -18.2]],
-          [[8.7, -16.6], [8.9, -14.4], [8.8, -11.3]],
-          ...ear,
-          ...nape,
-        ],
-      };
+      return [
+        [0, -21.3],
+        [1.9, -21.7],
+        [3.9, -21.2],
+        [5.8, -20.4],
+        [7.5, -18.7],
+        [8.7, -15.7],
+        [8.9, -12.4],
+        [8.5, -9.4],
+        ...skull.slice(6),
+      ];
     case "beanie":
-      return {
-        start: [0, -23.2],
-        segs: [
-          [[5.2, -23.2], [8.6, -19.6], [8.8, -14.6]],
-          // the folded cuff
-          [[8.9, -13.7], [9.2, -13.3], [9.1, -12.2]],
-          [[9, -11.6], [8.4, -11.4], [8.25, -10.2]],
-          ...ear.slice(1),
-          ...nape,
-        ],
-      };
-    case "bob":
-      return {
-        start: [0, -20.6],
-        segs: [
-          [[5.1, -20.6], [9, -16.9], [9.1, -11.8]],
-          [[9.2, -8.2], [9.8, -4.6], [9.6, -1.6]],
-          // the ends curl in under the jaw
-          [[9.4, -0.4], [7.8, -0.1], [6.6, -0.4]],
-          [[6.2, 0.4], [5.9, 1.2], [5.8, 2.4]],
-        ],
-      };
-    case "long":
-      return {
-        start: [0, -20.8],
-        segs: [
-          [[5.2, -20.8], [9.1, -16.8], [9.2, -11.6]],
-          // hugging the neck, then spreading over the shoulders and down the back
-          [[9.25, -7.5], [9, -3.5], [9.6, -0.5]],
-          [[10.2, 2.2], [11.4, 5.5], [11.8, 9.5]],
-          [[12, 12.5], [11.2, 15.5], [10, 16.8]],
-          [[9, 17.6], [8.6, 16.6], [7.8, 17.3]],
-        ],
-      };
+      return [
+        [0, -22.5],
+        [4.6, -21.9],
+        [7.5, -19.6],
+        [8.9, -16.2],
+        // the folded cuff
+        [9.4, -13.4],
+        [9.5, -11.6],
+        [8.8, -10.6],
+        ...skull.slice(6),
+      ];
     case "bun":
-      return {
-        start: [0, -19.9],
-        segs: [[[4.6, -19.9], [8.2, -16.4], [8.3, -11.6]], ...ear, ...nape],
-        extra: "bun",
-      };
+      // hair pulled back tight
+      return [[0, -20.1], [3.9, -19.7], [6.6, -18.1], [8.1, -15.5], [8.7, -12.4], [8.5, -9.4], ...skull.slice(6)];
     case "curls": {
-      // a soft, uneven halo of curls: points round a circle, pushed in and out
-      const cx = 0;
-      const cy = -10.4;
-      const wobble = [0, 0.5, -0.2, 0.7, 0.1, 0.6, -0.1, 0.8, 0.2, 0.5, 0, 0.6, -0.3];
-      const n = wobble.length - 1;
-      const pts: Pt[] = [];
-      for (let i = 0; i <= n; i++) {
-        const a = -90 + (i / n) * 148;
-        const r = 12 + wobble[i];
-        pts.push([cx + r * Math.cos((a * Math.PI) / 180), cy + r * Math.sin((a * Math.PI) / 180) * 0.97]);
+      // A full halo of curls with soft bumps, drawing in at the nape.
+      const out: Pt[] = [];
+      const steps = 14;
+      for (let i = 0; i <= steps; i++) {
+        const a = -90 + (i / steps) * 128;
+        const r = 11.4 + (i % 2 ? 0.45 : -0.2);
+        out.push([r * Math.cos((a * Math.PI) / 180), -10.6 + r * Math.sin((a * Math.PI) / 180)]);
       }
-      const segs: Seg[] = [];
-      for (let i = 1; i < pts.length; i++) {
-        const [x0, y0] = pts[i - 1];
-        const [x1, y1] = pts[i];
-        // bulge each arc outwards a little so the curls read as round
-        const mx = (x0 + x1) / 2 - cx;
-        const my = (y0 + y1) / 2 - cy;
-        const len = Math.hypot(mx, my);
-        const push = 0.75;
-        segs.push([
-          [x0 + (mx / len) * push, y0 + (my / len) * push],
-          [x1 + (mx / len) * push, y1 + (my / len) * push],
-          [x1, y1],
-        ]);
-      }
-      const last = pts[pts.length - 1];
-      segs.push([[last[0] - 1.4, last[1] + 1.2], [6.4, 0.6], [5.8, 2.2]]);
-      return { start: pts[0], segs };
+      return [...out, [7.4, -1.6]];
     }
+    case "bob":
+      return [
+        [0, -20.6],
+        [4.4, -20.1],
+        [7.3, -18.2],
+        [8.8, -15],
+        [9.3, -11.4],
+        [9.2, -7.6],
+        [9.1, -4],
+        [9.4, -0.8],
+        [9.7, 2],
+        // the ends rest on the shoulders
+        [8.8, 3.3],
+        [4.4, 3.8],
+        [0, 3.6],
+      ];
+    case "long":
+    case "swept":
+      // a centre parting, hair close at the neck, then spreading over the back
+      return [
+        [0, -20.3],
+        [4.6, -20.1],
+        [7.5, -18.1],
+        [9, -14.9],
+        [9.3, -11.3],
+        [8.9, -7.7],
+        [8.1, -4.4],
+        [7.8, -1.4],
+        [8.5, 2.4],
+        [9.7, 6.8],
+        [10.4, 11.2],
+        [10.1, 15],
+        // uneven ends down the back
+        [9, 17.4],
+        [7.2, 17.9],
+        [4.6, 17.1],
+        [2.2, 18.2],
+        [0, 17.6],
+      ];
   }
 }
 
-/** One person, from behind: a single path. */
+/** Hair swept over one shoulder: this side falls further and wider. */
+const SWEPT: Pt[] = [
+  [0, -20.3],
+  [4.6, -20.1],
+  [7.5, -18.1],
+  [9, -14.9],
+  [9.4, -11.3],
+  [9.4, -7.6],
+  [9.6, -3.8],
+  [10.5, 0.4],
+  [11.7, 4.8],
+  [12.6, 9.8],
+  [12.9, 15],
+  [12.2, 19.6],
+  [10.4, 21.7],
+  [7.6, 21],
+  [4.2, 18.6],
+  [0, 17.6],
+];
+
+/** Hair that hides the neck and falls on the shoulders is drawn as its own shape. */
+const fallsOnShoulders = (hair: Hair) => hair === "long" || hair === "swept" || hair === "bob";
+const showsEars = (hair: Hair) => hair === "buzz" || hair === "short" || hair === "crop" || hair === "beanie" || hair === "bun";
+
+const mirror = ([x, y]: Pt): Pt => [-x, y];
+
+/** One person, from behind, as a single path. */
 export function personPath(spec: PersonSpec): string {
-  const shoulders = spec.shoulders ?? 19.5;
-  const neck = spec.neck ?? 5.7;
+  const shoulders = spec.shoulders ?? 17.6;
+  const neck = spec.neck ?? 6.3;
   const slope = spec.slope ?? 0;
   const tilt = spec.tilt ?? 0;
   const turn = spec.turn ?? 0;
-  const s = spec.head ?? 1.06;
-  const head = headRight(spec.hair);
-  // The head pivots on the top of the neck; its nape sits 11 above the shoulder line.
-  const left = mirrorBack(head.start, head.segs);
-  const end = head.segs[head.segs.length - 1][2];
-  const all: Seg[] = [...head.segs, [[end[0] * 0.5, end[1] + 0.6], [-end[0] * 0.5, end[1] + 0.6], [-end[0], end[1]]], ...left];
-  const moved = moveSegs(head.start, all, tilt, turn, -11, s);
-  let d = path(moved.start, moved.segs) + "Z";
-  if (head.extra === "bun") {
-    const [bx, by] = transform([0.6, -21.6], tilt, turn, -11, s);
-    const r = 4.3 * s;
-    d += `M${f(bx)} ${f(by - r)}a${f(r)} ${f(r * 0.94)} 0 1 1 -0.01 0Z`;
-  }
+  const s = spec.head ?? 1.08;
   const twist = spec.twist ?? 0;
   const lean = spec.lean ?? 0;
-  return body(shoulders * (1 + 0.16 * twist), shoulders * (1 - 0.16 * twist), neck, slope + lean, slope - lean) + d;
+
+  // A turned body shows one shoulder wider than the other.
+  const bodyRight = bodySide(shoulders * (1 + 0.14 * twist), neck, slope + lean);
+  const bodyLeft = bodySide(shoulders * (1 - 0.14 * twist), neck, slope - lean).map(mirror);
+  // The head pivots on the top of the neck.
+  const place = (p: Pt) => transform(p, tilt, turn, -9.5, s);
+  const side = headSide(spec.hair);
+  const headRight = side.map(place);
+  const headLeft = (spec.hair === "swept" ? SWEPT : side).map(mirror).map(place);
+
+  let d: string;
+  if (fallsOnShoulders(spec.hair)) {
+    // Body with its neck, and the hair over it.
+    const neckTop: Pt[] = [[0, -15]];
+    d = smooth([...neckTop, [neck, -15], ...bodyRight, ...[...bodyLeft].reverse(), [-neck, -15]]);
+    d += smooth([...headRight, ...headLeft.slice(1, -1).reverse()]);
+  } else {
+    // One outline: over the head, down into the neck and out along the shoulders.
+    d = smooth([...headRight, ...bodyRight, ...[...bodyLeft].reverse(), ...headLeft.slice(1).reverse()]);
+  }
+
+  if (showsEars(spec.hair)) {
+    for (const x of [1, -1]) {
+      const [cx, cy] = place([x * 8.35, -8.2]);
+      d += oval([cx, cy], 0.9 * s, 2.4 * s, tilt + x * 10);
+    }
+  }
+  if (spec.hair === "bun") {
+    const [bx, by] = place([0.3, -20.2]);
+    d += oval([bx, by], 4.3 * s, 3.7 * s, tilt);
+  }
+  return d;
 }
 
 // ── Performers on the TV ────────────────────────────────────────────────────
@@ -420,11 +446,14 @@ export const PERFORMERS: Record<Pose, string[]> = {
   dj: dj(),
 };
 
-/** "bingo" in neon tube lettering (Tilt Neon, SIL Open Font License), 257.1 × 91.5. */
-export const NEON_BINGO = {
-  width: 257.1,
+/** "bar beats bingo" in neon tube lettering (Tilt Neon, SIL Open Font License), 759.2 × 91.5. */
+export const NEON_SIGN = {
+  width: 759.2,
   height: 91.5,
-  d: "M0 70.1Q0 72.6 1.4 73.9Q2.7 75.2 4.5 75.2Q6.3 75.2 7.7 73.9Q8.8 72.7 9 70.6Q11.4 72.4 14.3 73.7Q18.7 75.6 24 75.6Q29 75.6 33.4 73.7Q37.7 71.8 41 68.3Q44.3 64.9 46.2 60.2Q48 55.4 48 49.7Q48 42.1 44.8 36.2Q41.6 30.4 36.2 27Q30.7 23.7 23.9 23.7Q17 23.7 11.6 27Q10.2 27.8 9 28.8V5Q9 2.5 7.7 1.2Q6.3 0 4.5 0Q2.7 0 1.4 1.2Q0 2.5 0 5ZM9 54.2V49.5Q9 44.6 10.8 40.8Q12.7 37 16 34.8Q19.4 32.7 23.9 32.7Q27.2 32.7 30 33.9Q32.8 35.2 34.8 37.5Q36.8 39.8 37.9 42.9Q39 46 39 49.7Q39 53.4 37.9 56.5Q36.7 59.6 34.7 61.8Q32.7 64.1 30 65.3Q27.2 66.6 24 66.6Q20.8 66.6 18.1 65.4Q15.4 64.3 13.3 62.5Q11.3 60.7 10.2 58.5Q9 56.3 9 54.2ZM62.8 70.5Q62.8 73.1 64.2 74.3Q65.5 75.6 67.3 75.6Q69.1 75.6 70.5 74.3Q71.8 73 71.8 70.5V28.7Q71.8 26.2 70.5 24.9Q69.1 23.7 67.3 23.7Q65.5 23.7 64.2 24.9Q62.8 26.2 62.8 28.7ZM62.8 10.9Q62.8 13.2 64.2 14.3Q65.5 15.5 67.3 15.5Q69.1 15.5 70.5 14.3Q71.8 13.2 71.8 10.9V6Q71.8 3.7 70.5 2.5Q69.1 1.4 67.3 1.4Q65.5 1.4 64.2 2.5Q62.8 3.7 62.8 6ZM125 70.5Q125 73 126.4 74.3Q127.7 75.6 129.5 75.6Q131.3 75.6 132.7 74.3Q134 73 134 70.5V45.2Q134 40 132.5 36Q131 32 128.3 29.2Q125.6 26.5 122 25.1Q118.3 23.7 114 23.7Q108.8 23.7 104.3 25.8Q101.1 27.3 98.5 29.6V28.7Q98.5 26.2 97.2 24.9Q95.8 23.6 94 23.6Q92.2 23.6 90.8 24.9Q89.5 26.2 89.5 28.7V70.5Q89.5 72.5 90.4 73.8Q91.3 75 92.7 75.4Q94 75.8 95.3 75.4Q96.7 75 97.6 73.8Q98.5 72.5 98.5 70.5V48.7Q98.5 44.8 99.6 41.8Q100.7 38.8 102.7 36.8Q104.6 34.8 107.3 33.8Q110 32.7 113.3 32.7Q117.1 32.7 119.7 34.1Q122.3 35.5 123.7 38.2Q125 41 125 45.2ZM157.5 80Q155.2 78.9 153.5 79.6Q151.7 80.3 151 81.9Q150.2 83.5 150.8 85.3Q151.3 87.1 153.5 88.2Q158.6 90.6 164.1 91.2Q169.5 91.9 174.6 90.8Q179.7 89.8 183.8 87Q187.9 84.3 190.3 79.9Q192.7 75.5 192.7 69.6V28.7Q192.7 26.2 191.4 24.9Q190 23.6 188.2 23.6Q186.4 23.6 185.1 24.8Q183.9 25.9 183.7 28Q182.8 27.3 181.7 26.6Q176.6 23.7 170.1 23.7Q163.8 23.7 158.7 26.7Q153.6 29.7 150.6 34.9Q147.6 40.1 147.6 46.7Q147.6 51.7 149.3 56Q151 60.2 154.1 63.4Q157.2 66.5 161.3 68.2Q165.4 69.9 170.2 69.9Q175 69.9 179.1 68.2Q181.6 67.2 183.7 65.6V69.6Q183.7 74.4 181.2 77.3Q178.7 80.3 174.7 81.5Q170.6 82.8 166.1 82.4Q161.6 82 157.5 80ZM183.7 46.5V46.9Q183.7 50 182.7 52.5Q181.7 55.1 180 57Q178.2 58.9 175.7 59.9Q173.2 60.9 170.2 60.9Q167.2 60.9 164.7 59.8Q162.2 58.8 160.4 56.9Q158.6 55.1 157.6 52.4Q156.6 49.8 156.6 46.7Q156.6 43.6 157.6 41Q158.6 38.5 160.4 36.6Q162.2 34.8 164.7 33.8Q167.1 32.7 170.1 32.7Q174.1 32.7 177.2 34.4Q180.2 36.2 182 39.3Q183.7 42.4 183.7 46.5ZM224.6 74.6Q227 75.4 228.7 74.5Q230.3 73.6 230.9 71.9Q231.5 70.2 230.7 68.6Q229.9 66.9 227.5 66Q225.7 65.4 224.2 64.6Q222.7 63.8 221.5 62.7Q220.2 61.6 219.1 60Q217.7 57.9 217 55.2Q216.2 52.6 216.2 49.6Q216.2 44.7 218.2 40.9Q220.2 37 223.8 34.8Q227.4 32.7 232.1 32.7Q236.8 32.7 240.4 34.8Q244 37 246.1 40.9Q248.1 44.7 248.1 49.6Q248.1 52.6 247.4 55.2Q246.6 57.8 245.2 59.9Q243.5 62.3 241.6 63.6Q239.7 65 236.7 66Q234.3 66.9 233.5 68.6Q232.7 70.2 233.3 71.9Q233.9 73.6 235.6 74.5Q237.2 75.4 239.5 74.6Q244 73 247.1 70.8Q250.2 68.6 252.6 64.9Q254.8 61.7 256 57.9Q257.1 54 257.1 49.6Q257.1 42.1 253.9 36.2Q250.6 30.4 245 27Q239.3 23.7 232.1 23.7Q225 23.7 219.4 27Q213.7 30.4 210.5 36.2Q207.2 42.1 207.2 49.6Q207.2 54.1 208.4 58Q209.6 61.9 211.7 65Q214.1 68.6 217.2 70.8Q220.4 73.1 224.6 74.6Z",
+  /** "bar beats", lit white like the logo's top line */
+  barBeats: "M0 70.1Q0 72.6 1.4 73.9Q2.7 75.2 4.5 75.2Q6.3 75.2 7.7 73.9Q8.8 72.7 9 70.6Q11.4 72.4 14.3 73.7Q18.7 75.6 24 75.6Q29 75.6 33.4 73.7Q37.7 71.8 41 68.3Q44.3 64.9 46.2 60.2Q48 55.4 48 49.7Q48 42.1 44.8 36.2Q41.6 30.4 36.2 27Q30.7 23.7 23.9 23.7Q17 23.7 11.6 27Q10.2 27.8 9 28.8V5Q9 2.5 7.7 1.2Q6.3 0 4.5 0Q2.7 0 1.4 1.2Q0 2.5 0 5ZM9 54.2V49.5Q9 44.6 10.8 40.8Q12.7 37 16 34.8Q19.4 32.7 23.9 32.7Q27.2 32.7 30 33.9Q32.8 35.2 34.8 37.5Q36.8 39.8 37.9 42.9Q39 46 39 49.7Q39 53.4 37.9 56.5Q36.7 59.6 34.7 61.8Q32.7 64.1 30 65.3Q27.2 66.6 24 66.6Q20.8 66.6 18.1 65.4Q15.4 64.3 13.3 62.5Q11.3 60.7 10.2 58.5Q9 56.3 9 54.2ZM107.7 29.3Q107.7 26.8 106.4 25.5Q105 24.2 103.2 24.2Q101.4 24.2 100.1 25.5Q98.8 26.7 98.7 28.9Q96.2 26.8 93.2 25.5Q88.8 23.7 83.7 23.7Q76.9 23.7 71.5 27Q66 30.3 62.9 36.1Q59.7 42 59.7 49.6Q59.7 55.3 61.5 60Q63.3 64.8 66.6 68.3Q69.9 71.8 74.3 73.7Q78.7 75.6 83.8 75.6Q88.9 75.6 93.3 74Q96.2 72.9 98.7 71.1V71.6Q98.7 74.1 100.1 75.4Q101.4 76.7 103.2 76.7Q105 76.7 106.4 75.4Q107.7 74.1 107.7 71.6ZM98.7 49.4V51.8Q98.7 55.5 97.7 58.3Q96.6 61.1 94.6 63Q92.6 64.8 89.9 65.7Q87.1 66.6 83.8 66.6Q80.5 66.6 77.7 65.3Q74.9 64.1 72.9 61.8Q70.9 59.5 69.8 56.4Q68.7 53.3 68.7 49.6Q68.7 45.9 69.8 42.8Q70.9 39.7 72.9 37.4Q74.8 35.2 77.6 33.9Q80.4 32.7 83.7 32.7Q88.1 32.7 91.5 34.8Q94.9 36.9 96.8 40.7Q98.7 44.5 98.7 49.4ZM150.5 33.4Q153 33.7 154.4 32.5Q155.9 31.4 156.2 29.6Q156.4 27.8 155.3 26.3Q154.2 24.8 151.7 24.4Q146.2 23.7 141.8 24.8Q137.5 25.9 134.3 28.4Q134 28.6 133.8 28.8Q133.7 26.5 132.5 25.3Q131.1 24 129.3 24Q127.5 24 126.2 25.2Q124.8 26.5 124.8 29.1V70.5Q124.8 72.5 125.7 73.8Q126.6 75 128 75.4Q129.3 75.8 130.7 75.3Q132 74.9 132.9 73.7Q133.8 72.5 133.8 70.5V48.4Q133.8 44.9 134.7 41.9Q135.6 38.9 137.6 36.8Q139.5 34.6 142.7 33.6Q145.9 32.7 150.5 33.4ZM199.2 70.1Q199.2 72.6 200.6 73.9Q201.9 75.2 203.7 75.2Q205.5 75.2 206.9 73.9Q208 72.7 208.2 70.6Q210.6 72.4 213.5 73.7Q217.9 75.6 223.2 75.6Q228.2 75.6 232.6 73.7Q236.9 71.8 240.2 68.3Q243.5 64.9 245.4 60.2Q247.2 55.4 247.2 49.7Q247.2 42.1 244 36.2Q240.8 30.4 235.4 27Q229.9 23.7 223.1 23.7Q216.2 23.7 210.8 27Q209.4 27.8 208.2 28.8V5Q208.2 2.5 206.9 1.2Q205.5 0 203.7 0Q201.9 0 200.6 1.2Q199.2 2.5 199.2 5ZM208.2 54.2V49.5Q208.2 44.6 210.1 40.8Q211.9 37 215.3 34.8Q218.6 32.7 223.1 32.7Q226.4 32.7 229.2 33.9Q232 35.2 234 37.5Q236 39.8 237.1 42.9Q238.2 46 238.2 49.7Q238.2 53.4 237.1 56.5Q235.9 59.6 233.9 61.8Q231.9 64.1 229.2 65.3Q226.4 66.6 223.2 66.6Q220 66.6 217.3 65.4Q214.6 64.3 212.6 62.5Q210.5 60.7 209.4 58.5Q208.2 56.3 208.2 54.2ZM268.1 52.6Q268.1 52.7 268.2 52.7Q269.5 54.1 272 54.1H291.7Q295.9 54.1 298.8 53.3Q301.6 52.5 303.2 51Q304.8 49.4 305.2 47Q305.6 44.6 305 41.5Q304 36 300.9 32Q297.9 28.1 293.3 25.9Q288.7 23.7 283.2 23.7Q276.3 23.7 270.8 26.9Q265.3 30.2 262.1 36Q258.9 41.9 258.9 49.7Q258.9 57.8 262.3 63.6Q265.7 69.4 271.4 72.5Q277.1 75.6 284.1 75.6Q286.9 75.6 289.9 75Q293 74.5 296.1 73.3Q299.2 72.2 302.3 70.4Q304.5 69.2 304.9 67.4Q305.4 65.6 304.5 64Q303.6 62.5 301.9 61.9Q300.1 61.3 297.9 62.6Q295.5 63.9 293.1 64.8Q290.8 65.7 288.5 66.2Q286.2 66.6 284.1 66.6Q279.4 66.6 275.8 64.7Q272.1 62.7 270 58.9Q268.5 56.2 268.1 52.6ZM272 45.1Q269.5 45.1 268.2 46.4Q268.1 46.5 268.1 46.6Q268.5 43.4 269.9 40.7Q271.8 36.9 275.2 34.8Q278.7 32.7 283.2 32.7Q286.6 32.7 289.3 33.9Q292 35.2 293.8 37.5Q295.5 39.9 296.2 43.1Q296.4 44.1 296.1 44.5Q295.9 44.9 295.4 45Q294.8 45.2 293.9 45.1Q292.9 45.1 291.7 45.1ZM365.7 29.3Q365.7 26.8 364.4 25.5Q363 24.2 361.2 24.2Q359.4 24.2 358.1 25.5Q356.8 26.7 356.7 28.9Q354.2 26.8 351.2 25.5Q346.8 23.7 341.7 23.7Q334.9 23.7 329.5 27Q324 30.3 320.9 36.1Q317.7 42 317.7 49.6Q317.7 55.3 319.5 60Q321.3 64.8 324.6 68.3Q327.9 71.8 332.3 73.7Q336.7 75.6 341.8 75.6Q346.9 75.6 351.3 74Q354.2 72.9 356.7 71.1V71.6Q356.7 74.1 358.1 75.4Q359.4 76.7 361.2 76.7Q363 76.7 364.4 75.4Q365.7 74.1 365.7 71.6ZM356.7 49.4V51.8Q356.7 55.5 355.7 58.3Q354.6 61.1 352.6 63Q350.6 64.8 347.9 65.7Q345.1 66.6 341.8 66.6Q338.5 66.6 335.7 65.3Q332.9 64.1 330.9 61.8Q328.9 59.5 327.8 56.4Q326.7 53.3 326.7 49.6Q326.7 45.9 327.8 42.8Q328.9 39.7 330.9 37.4Q332.8 35.2 335.6 33.9Q338.4 32.7 341.7 32.7Q346.1 32.7 349.5 34.8Q352.9 36.9 354.8 40.7Q356.7 44.5 356.7 49.4ZM388 70.5Q388 73.1 389.4 74.3Q390.7 75.6 392.5 75.6Q394.3 75.6 395.7 74.3Q397 73 397 70.5V33.7H404.1Q406.6 33.7 407.9 32.3Q409.2 31 409.2 29.2Q409.2 27.4 407.9 26Q406.6 24.7 404.1 24.7H397V15.7Q397 13.2 395.7 11.9Q394.3 10.6 392.5 10.6Q390.7 10.6 389.4 11.9Q388 13.2 388 15.7V24.7H381.9Q379.4 24.7 378.1 26Q376.8 27.4 376.8 29.2Q376.8 31 378.1 32.3Q379.4 33.7 381.9 33.7H388ZM447.3 35.3Q449.6 36.5 451.4 35.8Q453.1 35.1 453.9 33.5Q454.6 31.9 454.1 30.1Q453.5 28.4 451.3 27.3Q447.5 25.4 443.8 24.5Q440.1 23.7 436.7 23.7Q431.5 23.7 427.5 25.5Q423.5 27.4 421.2 30.7Q418.9 34 418.9 38.4Q418.9 42.9 421.2 45.6Q423.4 48.4 427.2 50.2Q431 52.1 435.7 53.7Q437.8 54.4 440.5 55.3Q443.1 56.3 445 57.8Q446.9 59.2 446.9 61.3Q446.9 63.2 445.7 64.3Q444.4 65.5 442.5 66Q440.5 66.6 438.2 66.6Q436.2 66.6 434.1 66.2Q431.9 65.7 429.7 64.9Q427.5 64.1 425.3 62.9Q423.1 61.7 421.4 62.3Q419.6 62.9 418.8 64.5Q417.9 66.1 418.4 67.9Q418.8 69.7 421.1 70.9Q425.4 73.2 429.8 74.4Q434.2 75.6 438.2 75.6Q443.4 75.6 447.4 73.8Q451.3 72.1 453.6 68.8Q455.9 65.6 455.9 61.3Q455.9 56.6 453.6 53.6Q451.2 50.6 447.2 48.6Q443.3 46.7 438.5 45.1Q437.1 44.7 435.3 44Q433.5 43.4 431.8 42.6Q430.1 41.8 429 40.8Q427.9 39.7 427.9 38.4Q427.9 36.4 429.2 35.1Q430.4 33.9 432.4 33.3Q434.4 32.7 436.7 32.7Q438.4 32.7 440.2 33Q441.9 33.3 443.7 33.9Q445.5 34.5 447.3 35.3Z",
+  /** "bingo", lit red */
+  bingo: "M502.1 70.1Q502.1 72.6 503.5 73.9Q504.8 75.2 506.6 75.2Q508.4 75.2 509.8 73.9Q510.9 72.7 511.1 70.6Q513.5 72.4 516.4 73.7Q520.8 75.6 526.1 75.6Q531.1 75.6 535.5 73.7Q539.8 71.8 543.1 68.3Q546.4 64.9 548.2 60.2Q550.1 55.4 550.1 49.7Q550.1 42.1 546.9 36.2Q543.7 30.4 538.2 27Q532.8 23.7 526 23.7Q519.1 23.7 513.7 27Q512.3 27.8 511.1 28.8V5Q511.1 2.5 509.8 1.2Q508.4 0 506.6 0Q504.8 0 503.5 1.2Q502.1 2.5 502.1 5ZM511.1 54.2V49.5Q511.1 44.6 513 40.8Q514.8 37 518.1 34.8Q521.5 32.7 526 32.7Q529.3 32.7 532.1 33.9Q534.9 35.2 536.9 37.5Q538.9 39.8 540 42.9Q541.1 46 541.1 49.7Q541.1 53.4 540 56.5Q538.8 59.6 536.8 61.8Q534.8 64.1 532 65.3Q529.3 66.6 526.1 66.6Q522.9 66.6 520.2 65.4Q517.5 64.3 515.5 62.5Q513.4 60.7 512.2 58.5Q511.1 56.3 511.1 54.2ZM564.9 70.5Q564.9 73.1 566.2 74.3Q567.6 75.6 569.4 75.6Q571.2 75.6 572.5 74.3Q573.9 73 573.9 70.5V28.7Q573.9 26.2 572.5 24.9Q571.2 23.7 569.4 23.7Q567.6 23.7 566.2 24.9Q564.9 26.2 564.9 28.7ZM564.9 10.9Q564.9 13.2 566.2 14.3Q567.6 15.5 569.4 15.5Q571.2 15.5 572.5 14.3Q573.9 13.2 573.9 10.9V6Q573.9 3.7 572.5 2.5Q571.2 1.4 569.4 1.4Q567.6 1.4 566.2 2.5Q564.9 3.7 564.9 6ZM627.1 70.5Q627.1 73 628.5 74.3Q629.8 75.6 631.6 75.6Q633.4 75.6 634.8 74.3Q636.1 73 636.1 70.5V45.2Q636.1 40 634.6 36Q633.1 32 630.4 29.2Q627.7 26.5 624 25.1Q620.4 23.7 616.1 23.7Q610.9 23.7 606.4 25.8Q603.2 27.3 600.6 29.6V28.7Q600.6 26.2 599.2 24.9Q597.9 23.6 596.1 23.6Q594.3 23.6 593 24.9Q591.6 26.2 591.6 28.7V70.5Q591.6 72.5 592.5 73.8Q593.4 75 594.8 75.4Q596.1 75.8 597.5 75.4Q598.8 75 599.7 73.8Q600.6 72.5 600.6 70.5V48.7Q600.6 44.8 601.7 41.8Q602.8 38.8 604.8 36.8Q606.7 34.8 609.4 33.8Q612.1 32.7 615.4 32.7Q619.2 32.7 621.8 34.1Q624.4 35.5 625.8 38.2Q627.1 41 627.1 45.2ZM659.6 80Q657.3 78.9 655.6 79.6Q653.8 80.3 653.1 81.9Q652.3 83.5 652.9 85.3Q653.4 87.1 655.6 88.2Q660.7 90.6 666.2 91.2Q671.6 91.9 676.7 90.8Q681.8 89.8 685.9 87Q690 84.3 692.4 79.9Q694.8 75.5 694.8 69.6V28.7Q694.8 26.2 693.5 24.9Q692.1 23.6 690.3 23.6Q688.5 23.6 687.2 24.8Q686 25.9 685.8 28Q684.9 27.3 683.8 26.6Q678.7 23.7 672.2 23.7Q665.9 23.7 660.8 26.7Q655.7 29.7 652.7 34.9Q649.7 40.1 649.7 46.7Q649.7 51.7 651.4 56Q653.1 60.2 656.2 63.4Q659.3 66.5 663.4 68.2Q667.5 69.9 672.3 69.9Q677.1 69.9 681.2 68.2Q683.7 67.2 685.8 65.6V69.6Q685.8 74.4 683.3 77.3Q680.8 80.3 676.8 81.5Q672.7 82.8 668.2 82.4Q663.7 82 659.6 80ZM685.8 46.5V46.9Q685.8 50 684.8 52.5Q683.8 55.1 682.1 57Q680.3 58.9 677.8 59.9Q675.3 60.9 672.3 60.9Q669.3 60.9 666.8 59.8Q664.3 58.8 662.5 56.9Q660.7 55.1 659.7 52.4Q658.7 49.8 658.7 46.7Q658.7 43.6 659.7 41Q660.7 38.5 662.5 36.6Q664.3 34.8 666.8 33.8Q669.2 32.7 672.2 32.7Q676.2 32.7 679.2 34.4Q682.3 36.2 684.1 39.3Q685.8 42.4 685.8 46.5ZM726.7 74.6Q729.1 75.4 730.8 74.5Q732.4 73.6 733 71.9Q733.6 70.2 732.8 68.6Q732 66.9 729.6 66Q727.8 65.4 726.3 64.6Q724.8 63.8 723.6 62.7Q722.3 61.6 721.2 60Q719.8 57.9 719.1 55.2Q718.3 52.6 718.3 49.6Q718.3 44.7 720.3 40.9Q722.3 37 725.9 34.8Q729.5 32.7 734.2 32.7Q738.9 32.7 742.5 34.8Q746.1 37 748.2 40.9Q750.2 44.7 750.2 49.6Q750.2 52.6 749.5 55.2Q748.7 57.8 747.3 59.9Q745.6 62.3 743.7 63.6Q741.8 65 738.8 66Q736.4 66.9 735.6 68.6Q734.8 70.2 735.4 71.9Q736 73.6 737.7 74.5Q739.3 75.4 741.6 74.6Q746.1 73 749.2 70.8Q752.3 68.6 754.7 64.9Q756.9 61.7 758.1 57.9Q759.2 54 759.2 49.6Q759.2 42.1 756 36.2Q752.7 30.4 747.1 27Q741.4 23.7 734.2 23.7Q727.1 23.7 721.5 27Q715.8 30.4 712.6 36.2Q709.3 42.1 709.3 49.6Q709.3 54.1 710.5 58Q711.7 61.9 713.8 65Q716.2 68.6 719.4 70.8Q722.5 73.1 726.7 74.6Z",
 };
 
 // ── The crowd ───────────────────────────────────────────────────────────────
@@ -443,12 +472,12 @@ export type CrowdMember = {
   period: number;
 };
 
-const her = { shoulders: 16.8, neck: 4.9, slope: 1.6 } as const;
-const him = { shoulders: 19, neck: 5.8 } as const;
+const her = { shoulders: 15.2, neck: 5.3, slope: 1.8 } as const;
+const him = { shoulders: 17.6, neck: 6.3 } as const;
 
 export const CROWD: CrowdMember[] = [
   // standing by the TV, in twos and threes, some further back than others
-  { row: 0, x: 8.6, y: 72.4, size: 0.27, spec: { ...her, hair: "long", tilt: 5, turn: 0.8, twist: 0.4 }, sway: 0.9, period: 5.3 },
+  { row: 0, x: 8.6, y: 72.4, size: 0.27, spec: { ...her, hair: "swept", tilt: 5, turn: 0.8, twist: 0.4 }, sway: 0.9, period: 5.3 },
   { row: 0, x: 15.6, y: 73.6, size: 0.3, spec: { ...him, hair: "crop", tilt: -4, turn: -0.7, twist: 0.6, lean: 1 }, sway: 0.7, period: 4.4 },
   { row: 0, x: 30, y: 75.8, size: 0.31, spec: { ...him, hair: "short", twist: -0.4 }, sway: 0.6, period: 4.9 },
   { row: 0, x: 37.8, y: 72.2, size: 0.26, spec: { ...her, hair: "bun", tilt: -3, turn: -0.6, twist: -0.5 }, sway: 1.1, period: 6.1 },

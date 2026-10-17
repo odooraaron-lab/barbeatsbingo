@@ -40,8 +40,8 @@ export function SiteHeader() {
 
   return (
     <header className="relative z-30 bg-black/95">
-      <div className="wrap flex items-center gap-3 py-3 sm:gap-6">
-        <Logo className="w-[124px] min-[370px]:w-[150px] md:w-[178px]" />
+      <div className="wrap flex items-center gap-2 py-3 min-[370px]:gap-3 sm:gap-6">
+        <Logo className="w-[112px] min-[350px]:w-[128px] min-[400px]:w-[150px] md:w-[178px]" />
 
         <nav aria-label="Main" className="ml-auto hidden items-center gap-1 lg:flex">
           {NAV.map((item) => (
@@ -95,13 +95,19 @@ export function SiteHeader() {
           </Link>
         </div>
 
-        <Link href="/contact-us" className="btn btn-red btn-sm ml-auto px-3 min-[370px]:px-[0.85rem] sm:hidden">
-          Contact us
-        </Link>
+        {/* Phones: both buttons stay in view, stacked beside the logo */}
+        <div className="ml-auto flex flex-col gap-1.5 sm:hidden">
+          <Link href="/contact-us" className="btn btn-red btn-sm min-h-[34px] w-full px-2.5 text-[0.8rem] min-[400px]:text-[0.85rem]">
+            Contact us
+          </Link>
+          <Link href="/login" className="btn btn-ghost btn-sm min-h-[34px] w-full px-2.5 text-[0.8rem] min-[400px]:text-[0.85rem]">
+            Customer login
+          </Link>
+        </div>
 
         <button
           type="button"
-          className="rounded-md p-2 text-white sm:ml-0 lg:hidden"
+          className="-mr-1.5 rounded-md p-1.5 text-white sm:mr-0 sm:p-2 lg:hidden"
           aria-expanded={open}
           aria-controls="mobile-menu"
           aria-label={open ? "Close menu" : "Open menu"}
@@ -137,14 +143,6 @@ export function SiteHeader() {
                 </Link>
               </li>
             ))}
-            <li className="mt-4 grid grid-cols-2 gap-3 sm:hidden">
-              <Link href="/login" className="btn btn-ghost">
-                Customer login
-              </Link>
-              <Link href="/contact-us" className="btn btn-red">
-                Contact us
-              </Link>
-            </li>
           </ul>
         </nav>
       )}

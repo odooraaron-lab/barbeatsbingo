@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { memo, useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
-import { CROWD, NEON_BINGO, PERFORMERS, personPath, type Pose } from "./show-art";
+import { CROWD, NEON_SIGN, PERFORMERS, personPath, type Pose } from "./show-art";
 
 /**
  * The home page's opening scene: a Bar Beats Bingo night in a bar. Music videos
@@ -160,11 +160,11 @@ function subscribeMotion(onChange: () => void) {
 
 const NeonSign = memo(function NeonSign() {
   const id = useId();
-  const { width, height, d } = NEON_BINGO;
+  const { width, height, barBeats, bingo } = NEON_SIGN;
   return (
     <svg viewBox={`-24 -24 ${width + 48} ${height + 48}`} className="show-sign" aria-hidden>
       <defs>
-        <filter id={`${id}-glow`} x="-25%" y="-50%" width="150%" height="200%">
+        <filter id={`${id}-glow`} x="-10%" y="-50%" width="120%" height="200%">
           <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="far" />
           <feGaussianBlur in="SourceGraphic" stdDeviation="3.2" result="near" />
           <feMerge>
@@ -172,14 +172,22 @@ const NeonSign = memo(function NeonSign() {
             <feMergeNode in="near" />
           </feMerge>
         </filter>
-        <filter id={`${id}-core`} x="-5%" y="-5%" width="110%" height="110%">
+        <filter id={`${id}-core`} x="-2%" y="-5%" width="104%" height="110%">
           <feMorphology operator="erode" radius="1.7" />
           <feGaussianBlur stdDeviation="0.5" />
         </filter>
       </defs>
-      <path d={d} className="show-sign-glow" filter={`url(#${id}-glow)`} />
-      <path d={d} className="show-sign-tube" />
-      <path d={d} className="show-sign-core" filter={`url(#${id}-core)`} />
+      {/* "bar beats" in white and "bingo" in red, like the logo */}
+      {[
+        { d: barBeats, tone: "white" },
+        { d: bingo, tone: "red" },
+      ].map(({ d, tone }) => (
+        <g key={tone} className={`show-sign-${tone}`}>
+          <path d={d} className="show-sign-glow" filter={`url(#${id}-glow)`} />
+          <path d={d} className="show-sign-tube" />
+          <path d={d} className="show-sign-core" filter={`url(#${id}-core)`} />
+        </g>
+      ))}
     </svg>
   );
 });
