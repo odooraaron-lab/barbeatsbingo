@@ -1,94 +1,155 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
+import Image from "next/image";
+import { memo, useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
+import { CROWD, NEON_BINGO, PERFORMERS, personPath, type Pose } from "./show-art";
 
 /**
- * The home page's opening scene: a Bar Beats Bingo show playing in a venue.
- * The TV plays the music videos, the crowd bobs along, and your scorecard gets
- * stamped each time one of its songs plays, until the middle row makes a line.
+ * The home page's opening scene: a Bar Beats Bingo night in a bar. Music videos
+ * play on the TV, the room watches, and the songs on your scorecard get marked
+ * off as they play, until the middle row makes a line and the show stops for a
+ * card check.
  */
 
 const LETTERS = ["B", "I", "N", "G", "O"];
 
-// The scorecard, row by row ("Title · Artist"); null is the free space.
+// The scorecard, row by row, as printed on a real card; null is the free space.
 const CELLS: (string | null)[] = [
-  "Love Not War · Jason Derulo",
-  "Heat Waves · Glass Animals",
-  "Shake It Off · Taylor Swift",
-  "Cover Me In Sunshine · P!nk",
-  "Dance Monkey · Tones And I",
-  "Dancing Feet · Kygo",
-  "Despacito · Luis Fonsi",
-  "Better When I'm Dancin' · Meghan Trainor",
-  "Kiss My (Uh Oh) · Anne-Marie",
-  "Final Song · MØ",
-  "Good As Hell · Lizzo",
-  "Señorita · Shawn Mendes",
+  "Love Not War - Jason Derulo, Nuka",
+  "Heat Waves - Glass Animals",
+  "Shake It Off - Taylor Swift",
+  "Cover Me In Sunshine - P!nk, Willow Sage Hart",
+  "Dance Monkey - Tones And I",
+  "Dancing Feet - Kygo",
+  "Final Song - MØ",
+  "Despacito - Luis Fonsi, Daddy Yankee",
+  "Better When I'm Dancin' - Meghan Trainor",
+  "No - Little Mix",
+  "Good As Hell - Lizzo",
+  "Señorita - Shawn Mendes, Camila Cabello",
   null,
-  "X · Jonas Brothers",
-  "BED · Joel Corry",
-  "SNAP · Rosa Linn",
-  "What A Man Gotta Do · Jonas Brothers",
-  "Cold Heart · Elton John, Dua Lipa",
-  "Easy On Me · Adele",
-  "Ghost · Ella Henderson",
-  "Watermelon Sugar · Harry Styles",
-  "Just You And I · Tom Walker",
-  "I Ain't Worried · OneRepublic",
-  "Weekend · Mufasa & Hypeman",
-  "Levitating · Dua Lipa",
-];
-
-// The songs the show plays, in order. Letters go B, I, N, G, O in turn, and a song
-// on the card always sits in its letter's column. The 11th song finishes the middle row.
-type Call = { cell: number | null; title: string; artist: string; hue: number };
-const CALLS: Call[] = [
-  { cell: 0, title: "Love Not War", artist: "Jason Derulo", hue: 350 },
-  { cell: 11, title: "Señorita", artist: "Shawn Mendes", hue: 28 },
-  { cell: 17, title: "Cold Heart", artist: "Elton John, Dua Lipa", hue: 200 },
-  { cell: 13, title: "X", artist: "Jonas Brothers", hue: 285 },
-  { cell: null, title: "Shut Up and Dance", artist: "Walk the Moon", hue: 165 },
-  { cell: null, title: "Mr. Brightside", artist: "The Killers", hue: 12 },
-  { cell: 6, title: "Despacito", artist: "Luis Fonsi", hue: 45 },
-  { cell: null, title: "Valerie", artist: "Amy Winehouse", hue: 190 },
-  { cell: 23, title: "Weekend", artist: "Mufasa & Hypeman", hue: 320 },
-  { cell: 14, title: "BED", artist: "Joel Corry", hue: 255 },
-  { cell: 10, title: "Good As Hell", artist: "Lizzo", hue: 340 },
+  "X - Jonas Brothers, Karol G",
+  "Kiss My (Uh Oh) - Anne-Marie, Little Mix",
+  "SNAP - Rosa Linn",
+  "What A Man Gotta Do - Jonas Brothers",
+  "Cold Heart - Elton John, Dua Lipa",
+  "Easy On Me - Adele",
+  "BED - Joel Corry, RAYE, David Guetta",
+  "Watermelon Sugar - Harry Styles",
+  "Just You And I - Tom Walker",
+  "I Ain't Worried - OneRepublic",
+  "Weekend - Mufasa & Hypeman",
+  "Ghost - Ella Henderson",
 ];
 const WIN_ROW = 2;
 
+type Look = "stage" | "sunset" | "city" | "club";
+type Call = {
+  /** The square this song is on, or null if it isn't on your card. */
+  cell: number | null;
+  title: string;
+  artist: string;
+  /** The video's main colour, which also lights the room. */
+  hue: number;
+  pose: Pose;
+  look: Look;
+  /** Where the performer stands, in % across the screen. */
+  at: number;
+  flip?: boolean;
+};
+
+// The songs the show plays, in order. Letters go B, I, N, G, O in turn (as on the
+// call list), and a song on the card sits in its letter's column. Song 9 makes the line.
+const CALLS: Call[] = [
+  { cell: 10, title: "Good As Hell", artist: "Lizzo", hue: 330, pose: "reach", look: "stage", at: 50 },
+  { cell: 1, title: "Heat Waves", artist: "Glass Animals", hue: 22, pose: "guitar", look: "sunset", at: 42 },
+  { cell: null, title: "Shut Up and Dance", artist: "Walk the Moon", hue: 192, pose: "mic", look: "club", at: 58, flip: true },
+  { cell: 18, title: "Easy On Me", artist: "Adele", hue: 222, pose: "mic", look: "city", at: 44 },
+  { cell: 14, title: "Kiss My (Uh Oh)", artist: "Anne-Marie & Little Mix", hue: 300, pose: "reach", look: "club", at: 46, flip: true },
+  { cell: 20, title: "Watermelon Sugar", artist: "Harry Styles", hue: 350, pose: "guitar", look: "stage", at: 56, flip: true },
+  { cell: 11, title: "Señorita", artist: "Shawn Mendes & Camila Cabello", hue: 32, pose: "mic", look: "sunset", at: 52 },
+  { cell: null, title: "Mr. Brightside", artist: "The Killers", hue: 262, pose: "guitar", look: "stage", at: 46 },
+  { cell: 13, title: "X", artist: "Jonas Brothers & Karol G", hue: 168, pose: "dj", look: "club", at: 50 },
+];
+
 type State = {
-  /** Index into CALLS of the song on the TV; -1 shows the round's title card. */
+  round: number;
+  /** Index into CALLS of the video on the TV; -1 shows the round's title screen. */
   call: number;
-  stamped: number[];
-  /** The dauber hovers over `cell` (or rests beside the card when null). */
-  dauber: { cell: number | null; press: boolean };
-  win: boolean;
+  marked: number[];
+  bingo: boolean;
   clearing: boolean;
 };
 
-const START: State = { call: -1, stamped: [], dauber: { cell: null, press: false }, win: false, clearing: false };
+const fresh = (round: number): State => ({ round, call: -1, marked: [], bingo: false, clearing: false });
 const FINISHED: State = {
+  round: 1,
   call: CALLS.length - 1,
-  stamped: CALLS.flatMap((c) => (c.cell === null ? [] : [c.cell])),
-  dauber: { cell: null, press: false },
-  win: true,
+  marked: CALLS.flatMap((c) => (c.cell === null ? [] : [c.cell])),
+  bingo: true,
   clearing: false,
 };
 
-// The card is laid out in container units (1cqw = 1% of the card's width), so the
-// dauber can be aimed at any square with plain arithmetic.
-const PAD = 3;
-const GAP = 0.7;
-const HEAD = 7.5;
-const CELL = (100 - PAD * 2 - GAP * 4) / 5;
-const cellCentre = (i: number) => ({
-  x: PAD + (i % 5) * (CELL + GAP) + CELL / 2,
-  y: PAD + HEAD + GAP + Math.floor(i / 5) * (CELL + GAP) + CELL / 2,
-});
-const DAUBER_W = 11;
-const DAUBER_H = (DAUBER_W * 90) / 40;
-const DAUBER_REST = { x: -4, y: 78 };
+// The same image size for the title screen and the corner logo, so it downloads once.
+const LOGO_SIZES = "(min-width: 1024px) 260px, 45vw";
+
+const HUE_TITLE = 352;
+const HUE_BINGO = 44;
+
+// The card is drawn in its own units: 100 wide.
+const C = { padX: 3.5, top: 9.8, outer: 1.1, line: 0.75, bottom: 3.6 };
+const CELL = (100 - C.padX * 2 - C.outer * 2 - C.line * 4) / 5;
+const CARD_H = C.top + C.outer * 2 + CELL * 5 + C.line * 4 + C.bottom;
+const cellBox = (i: number) => {
+  const x = C.padX + C.outer + (i % 5) * (CELL + C.line);
+  const y = C.top + C.outer + Math.floor(i / 5) * (CELL + C.line);
+  return { x, y, cx: x + CELL / 2, cy: y + CELL / 2 };
+};
+
+// Each highlighter stroke is a little different: height off the middle, angle, reach.
+const STROKE_JITTER = [0.6, -0.9, 0.3, -0.4, 1, -0.7, 0.2, 0.8, -1.1, 0.4, -0.3, 0.9, 0, -0.8, 0.5];
+function highlighterPath(i: number) {
+  const { x, cy } = cellBox(i);
+  const j = STROKE_JITTER[i % STROKE_JITTER.length];
+  const y0 = cy + j * 0.9;
+  const y1 = cy - j * 0.5 + 0.2;
+  const x0 = x - 0.9 + Math.abs(j) * 0.4;
+  const x1 = x + CELL + 0.8 - Math.abs(j) * 0.3;
+  return `M${x0.toFixed(2)} ${y0.toFixed(2)}Q${((x0 + x1) / 2).toFixed(2)} ${(y0 + j * 0.5).toFixed(2)} ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+}
+
+/** A quick hand-drawn loop round a row, overlapping where it started. */
+function loopPath(row: number) {
+  const top = cellBox(row * 5).y - 2.1;
+  const bottom = top + CELL + 4.2;
+  const mid = (top + bottom) / 2;
+  const pts: [number, number][] = [
+    [9, top + 0.6],
+    [50, top - 0.9],
+    [93.5, top + 0.2],
+    [98.4, mid + 0.4],
+    [92, bottom + 0.6],
+    [50, bottom + 1],
+    [6.4, bottom - 0.2],
+    [1.6, mid - 0.6],
+    [8.4, top - 0.1],
+    [24, top - 1.4],
+  ];
+  // Catmull-Rom through the points, as cubic Béziers.
+  let d = `M${pts[0][0]} ${pts[0][1].toFixed(2)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[Math.min(pts.length - 1, i + 2)];
+    const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+    const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    d += `C${c1[0].toFixed(2)} ${c1[1].toFixed(2)} ${c2[0].toFixed(2)} ${c2[1].toFixed(2)} ${p2[0]} ${p2[1].toFixed(2)}`;
+  }
+  return d;
+}
+
+const PERSON_PATHS = CROWD.map((p) => personPath(p.spec));
 
 const motionQuery = "(prefers-reduced-motion: reduce)";
 function subscribeMotion(onChange: () => void) {
@@ -97,61 +158,60 @@ function subscribeMotion(onChange: () => void) {
   return () => mq.removeEventListener("change", onChange);
 }
 
-function NeonSign() {
+const NeonSign = memo(function NeonSign() {
   const id = useId();
+  const { width, height, d } = NEON_BINGO;
   return (
-    <svg viewBox="0 0 320 112" className="show-sign" aria-hidden>
+    <svg viewBox={`-24 -24 ${width + 48} ${height + 48}`} className="show-sign" aria-hidden>
       <defs>
-        <filter id={`${id}-red`} x="-30%" y="-80%" width="160%" height="260%">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="2.4" result="near" />
-          <feGaussianBlur in="SourceGraphic" stdDeviation="9" result="far" />
+        <filter id={`${id}-glow`} x="-25%" y="-50%" width="150%" height="200%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="far" />
+          <feGaussianBlur in="SourceGraphic" stdDeviation="3.2" result="near" />
           <feMerge>
             <feMergeNode in="far" />
             <feMergeNode in="near" />
-            <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
-        <filter id={`${id}-amber`} x="-20%" y="-40%" width="140%" height="180%">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="near" />
-          <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="far" />
-          <feMerge>
-            <feMergeNode in="far" />
-            <feMergeNode in="near" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
+        <filter id={`${id}-core`} x="-5%" y="-5%" width="110%" height="110%">
+          <feMorphology operator="erode" radius="1.7" />
+          <feGaussianBlur stdDeviation="0.5" />
         </filter>
       </defs>
-      {/* The tube outline round the sign */}
-      <rect x="8" y="8" width="304" height="96" rx="24" fill="none" stroke="#ffb02e" strokeWidth="5" filter={`url(#${id}-amber)`} />
-      <rect x="8" y="8" width="304" height="96" rx="24" fill="none" stroke="#fff1c9" strokeWidth="1.6" />
-      <text
-        x="160"
-        y="78"
-        textAnchor="middle"
-        className="show-sign-letters"
-        fontSize="62"
-        letterSpacing="6"
-        fill="none"
-        stroke="#ff3a55"
-        strokeWidth="5"
-        filter={`url(#${id}-red)`}
-      >
-        BIN<tspan className="show-sign-buzz">G</tspan>O
-      </text>
-      <text
-        x="160"
-        y="78"
-        textAnchor="middle"
-        className="show-sign-letters"
-        fontSize="62"
-        letterSpacing="6"
-        fill="none"
-        stroke="#ffe0e5"
-        strokeWidth="1.5"
-      >
-        BIN<tspan className="show-sign-buzz">G</tspan>O
-      </text>
+      <path d={d} className="show-sign-glow" filter={`url(#${id}-glow)`} />
+      <path d={d} className="show-sign-tube" />
+      <path d={d} className="show-sign-core" filter={`url(#${id}-core)`} />
     </svg>
+  );
+});
+
+function Video({ call }: { call: Call }) {
+  return (
+    <div className={`show-video is-${call.look}`} style={{ "--at": `${call.at}%` } as CSSProperties}>
+      <span className="show-video-sky" />
+      {call.look === "sunset" && <span className="show-sun" />}
+      {(call.look === "city" || call.look === "club") && (
+        <span className="show-bokeh">
+          {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <i key={i} />
+          ))}
+        </span>
+      )}
+      {(call.look === "stage" || call.look === "club") && (
+        <span className="show-beams">
+          {[0, 1, 2, 3].map((i) => (
+            <i key={i} />
+          ))}
+        </span>
+      )}
+      <span className="show-performer" style={{ left: `calc(${call.at}% - 27%)`, ...(call.flip ? { scale: "-1 1" } : null) }}>
+        <svg viewBox="0 0 100 100" aria-hidden>
+          {PERFORMERS[call.pose].map((d, i) => (
+            <path key={i} d={d} />
+          ))}
+        </svg>
+      </span>
+      <span className="show-floor" />
+    </div>
   );
 }
 
@@ -160,227 +220,173 @@ function Tv({ state }: { state: State }) {
   return (
     <div className="show-tv">
       <div className="show-screen">
-        <span className="show-blob show-blob-a" />
-        <span className="show-blob show-blob-b" />
-        <span className="show-spot show-spot-l" />
-        <span className="show-spot show-spot-r" />
-        {/* A singer on stage, in silhouette */}
-        <svg viewBox="0 0 160 90" className="show-singer" aria-hidden>
-          <rect x="0" y="84" width="160" height="6" className="show-stage" />
-          <circle cx="82" cy="31" r="4.8" />
-          <path d="M75.5 39.5 C78 37.6 86 37.6 88.5 39.5 L90.5 61 L73.5 61 Z" />
-          <path d="M74.5 60 L72.5 85 L78.6 85 L81.6 66.5 L84.4 85 L90.5 85 L89.5 60 Z" />
-          <path d="M87.5 41.5 C92 37 94.5 30 95.5 21.5" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" />
-          <circle cx="95.7" cy="20.2" r="2.2" />
-          <path d="M76.6 41.8 C71.5 45.5 72.5 40 77.6 35.6" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-          <rect x="77.2" y="32.3" width="2.4" height="4.6" rx="1.2" transform="rotate(-35 78.4 34.6)" />
-        </svg>
-        <span className="show-eq" aria-hidden>
-          {[0, 1, 2, 3, 4, 5].map((i) => (
-            <span key={i} style={{ animationDelay: `${-i * 0.17}s`, animationDuration: `${0.55 + (i % 3) * 0.18}s` }} />
-          ))}
-        </span>
-
-        {state.call < 0 && (
-          <span className="show-title-card">
-            <span className="show-title-big">Round 1</span>
-            <span className="show-title-small">Markers at the ready</span>
-          </span>
-        )}
-        {song && !state.win && (
+        {song ? (
           <>
-            <span className="show-counter">Song {state.call + 1}</span>
-            <span key={state.call} className="show-caption">
-              <span className="show-caption-letter">{LETTERS[state.call % 5]}</span>
-              <span className="show-caption-text">
-                <span className="show-caption-title">{song.title}</span>
-                <span className="show-caption-artist">{song.artist}</span>
+            <Video key={state.call} call={song} />
+            <span className="show-scrim" />
+            {!state.bingo && (
+              <span key={`now-${state.call}`} className="show-now">
+                <span className="show-now-letter">{LETTERS[state.call % 5]}</span>
+                <span className="show-now-text">
+                  <span className="show-now-meta">Song {state.call + 1}</span>
+                  <span className="show-now-title">{song.title}</span>
+                  <span className="show-now-artist">{song.artist}</span>
+                </span>
               </span>
-            </span>
+            )}
+            <Image src="/brand/logo.png" alt="" width={720} height={376} sizes={LOGO_SIZES} className="show-bug" />
           </>
-        )}
-        {state.win && (
-          <span className="show-paused">
-            <span className="show-paused-icon" aria-hidden>
-              <span />
-              <span />
-            </span>
-            <span className="show-paused-big">Bingo!</span>
-            <span className="show-paused-small">Checking the card</span>
+        ) : (
+          <span key={`title-${state.round}`} className="show-title">
+            <Image src="/brand/logo.png" alt="" width={720} height={376} sizes={LOGO_SIZES} className="show-title-logo" />
+            <span className="show-title-round">Round {state.round}</span>
           </span>
         )}
-        <span className="show-scanlines" />
+        {state.bingo && (
+          <span className="show-pause">
+            <span className="show-pause-icon" aria-hidden>
+              <span />
+              <span />
+            </span>
+            <span className="show-pause-word">Bingo!</span>
+            <span className="show-pause-note">Checking the card</span>
+          </span>
+        )}
+        <span className="show-glass" />
       </div>
     </div>
   );
 }
 
-type PersonProps = {
-  x: number;
-  s?: number;
-  hair?: "short" | "pony" | "bun" | "cap" | "curls" | "long";
-  hold?: "drink" | "card";
-  delay: number;
-};
-
-/** One person in the crowd, seen from behind. Their bottom edge sits at y=150. */
-function Person({ x, s = 1, hair = "short", hold, delay }: PersonProps) {
-  const arm = (side: 1 | -1) => (
-    <>
-      <path
-        d={`M${22 * side} 112 C${30 * side} 98 ${35 * side} 84 ${37 * side} 68`}
-        className="show-limb"
-        strokeWidth="10"
-        strokeLinecap="round"
-        fill="none"
-      />
-      <circle cx={37 * side} cy="64" r="6.5" />
-    </>
-  );
+function Person({ i }: { i: number }) {
+  const p = CROWD[i];
+  // The TV lights each person from its direction: a rim of light on the edges facing it.
+  // The screen is a wide light above the room, so the light comes mostly from above.
+  const headY = p.y - 22 * p.size;
+  const dx = (50 - p.x) * 0.35;
+  const dy = 44 - headY;
+  const len = Math.hypot(dx, dy);
+  const reach = [0.12, 0.15, 0.3][p.row];
+  const style = {
+    left: `${p.x - 30 * p.size}cqw`,
+    top: `${p.y - 40 * p.size}cqw`,
+    width: `${60 * p.size}cqw`,
+    "--rx": `${((dx / len) * reach).toFixed(3)}cqw`,
+    "--ry": `${((dy / len) * reach).toFixed(3)}cqw`,
+    "--sway": `${p.sway}deg`,
+    animationDuration: `${p.period}s`,
+    animationDelay: `${-((i * 1.37) % p.period).toFixed(2)}s`,
+  } as CSSProperties;
   return (
-    <g transform={`translate(${x} ${150 * (1 - s)}) scale(${s})`}>
-      <g className="show-bob" style={{ animationDelay: `${delay}s` }}>
-        {hold && (
-          <g className="show-arms-rest">
-            {arm(1)}
-            {hold === "drink" ? (
-              <g transform="translate(37 52)">
-                <rect x="-6" y="-17" width="12" height="18" rx="2" fill="#e9b04c" opacity="0.92" />
-                <rect x="-6" y="-19" width="12" height="4" rx="1.5" fill="#fbf2dc" />
-              </g>
-            ) : (
-              <g transform="translate(38 46) rotate(-12)">
-                <rect x="-11" y="-14" width="22" height="26" rx="1.5" fill="#f6f2e8" />
-                <circle cx="-4" cy="-5" r="2.6" fill="#d42f3c" />
-                <circle cx="5" cy="3" r="2.6" fill="#d42f3c" />
-                <circle cx="-3" cy="6" r="2.6" fill="#d42f3c" />
-              </g>
-            )}
-          </g>
-        )}
-        <g className="show-arms-up">
-          {arm(1)}
-          {arm(-1)}
-        </g>
-        {hair === "pony" && <ellipse cx="12" cy="88" rx="6" ry="12" />}
-        {hair === "long" && <path d="M-17 76 C-19 94 -14 104 -8 108 L8 108 C14 104 19 94 17 76 Z" />}
-        <path d="M-36 150 C-36 120 -24 106 0 103 C24 106 36 120 36 150 Z" />
-        <rect x="-7" y="84" width="14" height="22" rx="5" />
-        <ellipse cx="0" cy="74" rx="15" ry="18" />
-        {hair === "bun" && <circle cx="0" cy="54" r="7.5" />}
-        {hair === "cap" && <path d="M-16 70 C-16 50 16 50 16 70 Z" />}
-        {hair === "curls" && (
-          <g>
-            <circle cx="-11" cy="62" r="7" />
-            <circle cx="0" cy="57" r="8" />
-            <circle cx="11" cy="62" r="7" />
-          </g>
-        )}
-      </g>
-    </g>
-  );
-}
-
-function Crowd({ cheer }: { cheer: boolean }) {
-  const id = useId();
-  return (
-    <svg viewBox="0 0 400 150" preserveAspectRatio="xMidYMax meet" className={`show-crowd${cheer ? " is-cheering" : ""}`} aria-hidden>
-      <defs>
-        {/* Lit from above by the TV: the top of each shape takes the screen's colour */}
-        <linearGradient id={`${id}-front`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" className="show-crowd-lit" />
-          <stop offset="0.4" stopColor="#10171a" />
-          <stop offset="1" stopColor="#050607" />
-        </linearGradient>
-        <linearGradient id={`${id}-back`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" className="show-crowd-lit-dim" />
-          <stop offset="0.5" stopColor="#0c1214" />
-          <stop offset="1" stopColor="#080b0c" />
-        </linearGradient>
-      </defs>
-      <g fill={`url(#${id}-back)`} stroke={`url(#${id}-back)`} transform="translate(0 -14)">
-        <Person x={50} s={0.72} hair="short" delay={-0.27} />
-        <Person x={108} s={0.7} hair="pony" hold="drink" delay={-0.12} />
-        <Person x={168} s={0.74} hair="cap" delay={-0.38} />
-        <Person x={228} s={0.7} hair="long" delay={-0.06} />
-        <Person x={290} s={0.73} hair="short" hold="card" delay={-0.3} />
-        <Person x={348} s={0.7} hair="curls" delay={-0.19} />
-      </g>
-      <g fill={`url(#${id}-front)`} stroke={`url(#${id}-front)`}>
-        <Person x={20} s={1.08} hair="pony" delay={-0.1} />
-        <Person x={80} s={0.96} hair="cap" hold="drink" delay={-0.32} />
-        <Person x={138} s={1.12} hair="curls" delay={-0.05} />
-        <Person x={198} s={1} hair="long" hold="card" delay={-0.41} />
-        <Person x={258} s={1.1} hair="short" delay={-0.22} />
-        <Person x={318} s={0.98} hair="bun" hold="drink" delay={-0.15} />
-        <Person x={378} s={1.06} hair="short" delay={-0.36} />
-      </g>
-    </svg>
-  );
-}
-
-function Dauber({ press, at }: { press: boolean; at: { x: number; y: number } }) {
-  return (
-    <span
-      className={`show-dauber${press ? " is-pressing" : ""}`}
-      style={{ left: `${at.x - DAUBER_W / 2}cqw`, top: `${at.y - DAUBER_H}cqw`, width: `${DAUBER_W}cqw` }}
-    >
-      <svg viewBox="0 0 40 90" aria-hidden>
-        <rect x="9" y="1" width="22" height="13" rx="5" fill="#7d111c" />
-        <rect x="4" y="11" width="32" height="58" rx="11" fill="#e0384b" />
-        <rect x="9" y="17" width="6" height="44" rx="3" fill="#fff" opacity="0.32" />
-        <rect x="12" y="67" width="16" height="9" rx="2" fill="#9b1625" />
-        <ellipse cx="20" cy="81" rx="10" ry="7" fill="#c21f31" />
+    <span className={`show-person show-row-${p.row}`} style={style}>
+      <svg viewBox="-30 -40 60 95">
+        <path d={PERSON_PATHS[i]} />
       </svg>
     </span>
   );
 }
 
-function Scorecard({ state }: { state: State }) {
-  const target = state.dauber.cell === null ? DAUBER_REST : cellCentre(state.dauber.cell);
-  const lastStamp = state.stamped[state.stamped.length - 1];
+const ROWS = [0, 1, 2].map((row) => CROWD.flatMap((p, i) => (p.row === row ? [i] : [])));
+
+// The crowd and the pint never change, so they skip re-rendering as the show moves on.
+const Crowd = memo(function Crowd() {
+  const id = useId();
   return (
-    <div className="show-card">
-      <div className="show-card-grid">
+    <div className="show-crowd" style={{ "--shade": `url(#${id}-shade)` } as CSSProperties} aria-hidden>
+      {/* Each silhouette picks up a little of the TV's light on top, darkening downwards. */}
+      <svg width="0" height="0" className="show-crowd-defs">
+        <linearGradient id={`${id}-shade`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0.05" className="show-shade-top" />
+          <stop offset="0.45" className="show-shade-mid" />
+          <stop offset="0.8" className="show-shade-low" />
+        </linearGradient>
+      </svg>
+      {ROWS[0].map((i) => (
+        <Person key={i} i={i} />
+      ))}
+      {/* haze in the air between the rows, lit by the TV */}
+      <span className="show-haze show-haze-1" />
+      {ROWS[1].map((i) => (
+        <Person key={i} i={i} />
+      ))}
+      <span className="show-haze show-haze-2" />
+      {ROWS[2].map((i) => (
+        <Person key={i} i={i} />
+      ))}
+    </div>
+  );
+});
+
+/** Your drink on the table beside the card, out of focus. */
+const Pint = memo(function Pint() {
+  const id = useId();
+  return (
+    <svg viewBox="0 0 40 100" className="show-pint" aria-hidden>
+      <defs>
+        <linearGradient id={`${id}-beer`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#f7c24c" />
+          <stop offset="0.5" stopColor="#cf7c1c" />
+          <stop offset="1" stopColor="#6b3309" />
+        </linearGradient>
+        <linearGradient id={`${id}-depth`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#120600" stopOpacity="0.55" />
+          <stop offset="0.28" stopColor="#120600" stopOpacity="0" />
+          <stop offset="0.72" stopColor="#120600" stopOpacity="0" />
+          <stop offset="1" stopColor="#120600" stopOpacity="0.6" />
+        </linearGradient>
+      </defs>
+      <path d="M3.4 11L36.6 11L33.3 100L6.7 100Z" fill={`url(#${id}-beer)`} />
+      <path d="M3.4 11L36.6 11L33.3 100L6.7 100Z" fill={`url(#${id}-depth)`} />
+      <path d="M2.8 3.2Q20 1.4 37.2 3.2L36.7 11.6Q20 13.2 3.3 11.6Z" fill="#f1e2c6" />
+      <path d="M2 0.8L38 0.8L34 100L6 100Z" fill="none" stroke="#fff" strokeOpacity="0.3" strokeWidth="0.8" />
+      <path d="M36.8 2.4L33.5 98" className="show-pint-rim" />
+      <rect x="8.2" y="15" width="2.2" height="72" rx="1.1" fill="#fff" opacity="0.26" />
+    </svg>
+  );
+});
+
+function Scorecard({ state }: { state: State }) {
+  const lastMark = state.marked[state.marked.length - 1];
+  return (
+    <div className="show-card" style={{ aspectRatio: `100 / ${CARD_H.toFixed(2)}` }}>
+      <div className="show-card-tabs">
         {LETTERS.map((l) => (
-          <span key={l} className="show-card-letter">
+          <span key={l} className="show-card-tab">
             {l}
           </span>
         ))}
-        {CELLS.map((cell, i) => {
-          const stamped = state.stamped.includes(i);
-          const inWin = state.win && Math.floor(i / 5) === WIN_ROW;
-          return (
-            <span key={i} className={`show-card-cell${inWin ? " is-winning" : ""}`}>
-              {cell === null ? (
-                <span className="show-card-free">
-                  Free
-                  <br />
-                  space
-                </span>
-              ) : (
-                <span className="show-card-song">{cell}</span>
-              )}
-              {stamped && (
-                <span className={`show-daub${state.clearing ? " is-clearing" : ""}${i === lastStamp ? " is-new" : ""}`} />
-              )}
-            </span>
-          );
-        })}
       </div>
-      {state.win && !state.clearing && (
-        <>
-          <span
-            className="show-win-row"
-            style={{
-              top: `${PAD + HEAD + GAP + WIN_ROW * (CELL + GAP) - GAP}cqw`,
-              height: `${CELL + GAP * 2}cqw`,
-            }}
+      <div className="show-card-grid">
+        {CELLS.map((cell, i) =>
+          cell === null ? (
+            <span key={i} className="show-card-cell show-card-free">
+              <svg viewBox="0 0 10 10" aria-hidden>
+                <path d="M2 1.6L8.2 8.6M8 1.4L1.8 8.4" />
+              </svg>
+              <span>
+                Free
+                <br />
+                space
+              </span>
+            </span>
+          ) : (
+            <span key={i} className="show-card-cell">
+              {cell}
+            </span>
+          ),
+        )}
+      </div>
+      <svg viewBox={`0 0 100 ${CARD_H.toFixed(2)}`} className={`show-card-ink${state.clearing ? " is-clearing" : ""}`} aria-hidden>
+        {state.marked.map((cell) => (
+          <path
+            key={cell}
+            d={highlighterPath(cell)}
+            pathLength={1}
+            className={`show-highlight${cell === lastMark && !state.bingo ? " is-new" : ""}`}
           />
-          <span className="show-bingo-stamp">Bingo!</span>
-        </>
-      )}
-      <Dauber press={state.dauber.press} at={target} />
+        ))}
+        {state.bingo && <path d={loopPath(WIN_ROW)} pathLength={1} className="show-loop" />}
+      </svg>
     </div>
   );
 }
@@ -388,7 +394,7 @@ function Scorecard({ state }: { state: State }) {
 export function ShowScene({ className = "" }: { className?: string }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const onScreenRef = useRef(true);
-  const [state, setState] = useState<State>(START);
+  const [state, setState] = useState<State>(() => fresh(1));
   const [onScreen, setOnScreen] = useState(true);
   const reduced = useSyncExternalStore(subscribeMotion, () => window.matchMedia(motionQuery).matches, () => false);
 
@@ -424,31 +430,29 @@ export function ShowScene({ className = "" }: { className?: string }) {
       });
 
     (async () => {
+      let round = 1;
       while (!cancelled) {
-        await wait(1500);
+        setState(fresh(round));
+        await wait(2600);
         for (let k = 0; k < CALLS.length && !cancelled; k++) {
           const { cell } = CALLS[k];
           setState((s) => ({ ...s, call: k }));
           if (cell === null) {
-            await wait(1800);
+            await wait(2100);
             continue;
           }
-          await wait(700);
-          setState((s) => ({ ...s, dauber: { cell, press: false } }));
-          await wait(520);
-          setState((s) => ({ ...s, dauber: { cell, press: true }, stamped: [...s.stamped, cell] }));
-          await wait(260);
-          setState((s) => ({ ...s, dauber: { cell, press: false } }));
-          await wait(480);
-          setState((s) => ({ ...s, dauber: { cell: null, press: false } }));
-          await wait(440);
+          // The song plays for a moment before you spot it's on your card.
+          await wait(1150);
+          setState((s) => ({ ...s, marked: [...s.marked, cell] }));
+          await wait(1450);
         }
         if (cancelled) return;
-        setState((s) => ({ ...s, win: true }));
-        await wait(4200);
+        await wait(250);
+        setState((s) => ({ ...s, bingo: true }));
+        await wait(5400);
         setState((s) => ({ ...s, clearing: true }));
-        await wait(700);
-        setState(START);
+        await wait(900);
+        round = round >= 9 ? 1 : round + 1;
       }
     })();
 
@@ -459,25 +463,27 @@ export function ShowScene({ className = "" }: { className?: string }) {
   }, [reduced]);
 
   const shown = reduced ? FINISHED : state;
-  const hue = shown.call >= 0 ? CALLS[shown.call].hue : 350;
+  const hue = shown.bingo ? HUE_BINGO : shown.call >= 0 ? CALLS[shown.call].hue : HUE_TITLE;
 
   return (
     <div
       ref={rootRef}
-      className={`show-scene${shown.win && !shown.clearing ? " is-bingo" : ""}${onScreen ? "" : " is-paused"} ${className}`}
+      className={`show-scene${shown.bingo ? " is-bingo" : ""}${onScreen ? "" : " is-paused"} ${className}`}
       style={{ "--hue": hue } as CSSProperties}
       role="img"
-      aria-label="A Bar Beats Bingo show in a bar: music videos play on the TV, the crowd sings along, and a player stamps the songs on their scorecard until they get a line and call bingo."
+      aria-label="A Bar Beats Bingo night in a bar: music videos play on the TV, the room watches, and a player marks off the songs on their scorecard as they play, until they get a line and the show stops to check the card."
     >
       <span className="show-wall" />
-      {/* The TV's light on the wall behind the crowd (behind the TV itself, so it doesn't wash out the screen) */}
-      <span className="show-spill" />
       <NeonSign />
       <Tv state={shown} />
-      <Crowd cheer={shown.win && !shown.clearing} />
+      <Crowd />
+      {/* At each cut the room dips with the screen, then the new video lights it */}
+      <span key={`cut-${shown.round}-${shown.call}`} className="show-cut" />
+      <Pint />
       <div className="show-card-wrap">
         <Scorecard state={shown} />
       </div>
+      <span className="show-grade" />
     </div>
   );
 }
