@@ -173,26 +173,34 @@ function letterBoxBefore(line: Token[], at: number, from: number): Token | null 
   return !prev || before.x0 - prev.x1 > number.size * 1.2 ? before : null;
 }
 
-/** A song's number in a line: with its start time after it, or (without times) its letter before it. */
+/**
+ * A song in a line: where its number is, whether its start time follows the number
+ * ("B 1 0:28 Ksi - Voices"), and where its letter box is, if printed as text.
+ */
 type Anchor = { at: number; timed: boolean; letter: number | null };
 
 function anchorsOf(line: Token[]): Anchor[] {
-  const anchors: Anchor[] = [];
+  const found: (Anchor & { lettered: boolean })[] = [];
   for (let i = 0; i + 1 < line.length; i++) {
     if (!NUMBER.test(line[i].text)) continue;
-    if (TIME.test(line[i + 1].text)) {
-      const prev = anchors[anchors.length - 1];
-      const letter = letterBoxBefore(line, i, prev ? prev.at + 2 : 0);
-      anchors.push({ at: i, timed: true, letter: letter ? i - 1 : null });
-      continue;
-    }
-    // Without a time, a song is its letter then its number: "B 1 Ksi - Voices". The
-    // letter has to be the right one for the number, which a title almost never is.
     const n = Number(line[i].text);
-    const before = line[i - 1];
-    if (n > 0 && before && before.text === BINGO[(n - 1) % 5] && i - 1 > (anchors[anchors.length - 1]?.at ?? -1)) {
-      anchors.push({ at: i, timed: false, letter: i - 1 });
-    }
+    // Songs go B, I, N, G, O in turn, so a song's letter box matches its number.
+    const lettered = n > 0 && i > 0 && line[i - 1].text === BINGO[(n - 1) % 5];
+    const timed = TIME.test(line[i + 1].text);
+    if (lettered || timed) found.push({ at: i, timed, letter: lettered ? i - 1 : null, lettered });
+  }
+  // Where the letters are printed, every song has one, so a number inside a title
+  // ("9 To 5", then a start time) isn't taken for a song.
+  if (found.some((a) => a.lettered)) {
+    return found.filter((a) => a.lettered).map((a) => ({ at: a.at, timed: a.timed, letter: a.letter }));
+  }
+  // Letters drawn as shapes: each song's number is followed by its start time.
+  const anchors: Anchor[] = [];
+  for (const a of found) {
+    if (!a.timed) continue;
+    const prev = anchors[anchors.length - 1];
+    const letter = letterBoxBefore(line, a.at, prev ? prev.at + 2 : 0);
+    anchors.push({ at: a.at, timed: true, letter: letter ? a.at - 1 : null });
   }
   return anchors;
 }
@@ -201,7 +209,10 @@ type Entry = {
   n: number;
   letter: string | null;
   time: number | null;
-  start: number; // x where the entry begins (its letter box or number)
+  /** A time printed after the title: the song's start if the call list has times, else part of the title ("4:44"). */
+  trailing: Token | null;
+  start: number; // x where the entry begins (its letter box or number, or a time printed first)
+  end: number; // x where it ends, if something (its time) sits after the title
   titleStart: number;
   words: Token[];
   y: number;
@@ -252,18 +263,31 @@ export function parseCallList(pages: PdfTextItem[][]): { list: CallList; placed:
         continue;
       }
 
+      // "0:28 B 1 Ksi - Voices": each song's start time is printed before its letter.
+      const timeFirst = !anchors[0].timed && anchors[0].letter === 1 && TIME.test(line[0].text);
+      const leadingTime = (a: Anchor | undefined) =>
+        timeFirst && a?.letter && TIME.test(line[a.letter - 1]?.text ?? "") ? line[a.letter - 1] : null;
+
       const lineEntries: Entry[] = anchors.map((a, k) => {
         const next = anchors[k + 1];
-        const end = next ? (next.letter ?? next.at) : line.length;
+        let end = next ? (next.letter ?? next.at) : line.length;
+        if (leadingTime(next)) end -= 1;
         const from = a.at + (a.timed ? 2 : 1);
-        const words = line.slice(from, end);
+        let words = line.slice(from, end);
         const numberToken = line[a.at];
         const letterToken = a.letter !== null ? line[a.letter] : null;
+        const lead = leadingTime(a);
+        const last = words[words.length - 1];
+        const trailing = !a.timed && !lead && words.length > 1 && TIME.test(last.text) ? last : null;
+        if (trailing) words = words.slice(0, -1);
+        const time = a.timed ? parseClock(line[a.at + 1].text) : lead ? parseClock(lead.text) : null;
         return {
           n: Number(numberToken.text),
           letter: letterToken?.text ?? null,
-          time: a.timed ? parseClock(line[a.at + 1].text) : null,
-          start: (letterToken ?? numberToken).x0,
+          time,
+          trailing,
+          start: (lead ?? letterToken ?? numberToken).x0,
+          end: trailing?.x1 ?? 0,
           titleStart: words[0]?.x0 ?? line[from - 1].x1,
           words,
           y: numberToken.y,
@@ -276,15 +300,23 @@ export function parseCallList(pages: PdfTextItem[][]): { list: CallList; placed:
     }
   });
 
-  // A call list either has times for all its songs or for none. In one with times, a
-  // letter and number inside a title isn't a song.
-  const timed = entries.filter((e) => e.time !== null).length > entries.length / 2;
-  // Keep the first of any repeated number; sort by call order.
+  // A call list either has times for all its songs or for none.
+  const withTimes = entries.filter((e) => e.time !== null || e.trailing).length > entries.length / 2;
+  for (const e of entries) {
+    if (!e.trailing) continue;
+    if (withTimes) e.time = parseClock(e.trailing.text);
+    else e.words.push(e.trailing); // part of the title after all
+  }
+  // Keep the first of any repeated number; sort by call order. In a call list with
+  // times, a letter and number inside a title isn't a song.
   const seen = new Set<number>();
   const unique = entries
-    .filter((e) => e.n > 0 && (!timed || e.time !== null) && !seen.has(e.n) && seen.add(e.n) && e.words.length > 0)
+    .filter((e) => e.n > 0 && (!withTimes || e.time !== null) && !seen.has(e.n) && seen.add(e.n) && e.words.length > 0)
     .sort((p, q) => p.n - q.n);
   if (unique.length < 5) return null;
+  // The player can only follow times that run in order through the show (not, say,
+  // times that start again for each video).
+  const timed = withTimes && unique.every((e, i) => i === 0 || (e.time ?? 0) >= (unique[i - 1].time ?? 0));
 
   // Each song belongs to the nearest block heading above it, in its column.
   const partOf = (e: Entry) => {
@@ -297,7 +329,7 @@ export function parseCallList(pages: PdfTextItem[][]): { list: CallList; placed:
   };
 
   const placed: PlacedSong[] = unique.map((e) => {
-    const right = Math.max(...e.words.map((w) => w.x1));
+    const right = Math.max(e.end, ...e.words.map((w) => w.x1));
     const lowest = Math.min(e.y, ...e.words.map((w) => w.y));
     const part = partOf(e);
     return {

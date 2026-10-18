@@ -1,8 +1,8 @@
 "use client";
 
 import { useId, useMemo, useRef, useState } from "react";
-import { BadgeCheck, Minus, Plus, Search, Star, X } from "lucide-react";
-import { BINGO, type CallSong } from "@/lib/call-list";
+import { BadgeCheck, BellRing, Minus, Plus, Search, Star, X } from "lucide-react";
+import { BINGO, formatClock, type CallSong } from "@/lib/call-list";
 import {
   cardProgress,
   findCardId,
@@ -14,6 +14,7 @@ import {
   type BingoCard,
   type CardSet,
   type Judge,
+  type Prize,
 } from "@/lib/bingo";
 import { useShowSession } from "./show-session";
 
@@ -32,6 +33,20 @@ function cardsText(ids: string[], most = 3) {
   const more = ids.length - shown.length;
   if (more > 0) return `cards ${shown.join(", ")} and ${more} more`;
   return `cards ${shown.slice(0, -1).join(", ")} and ${shown[shown.length - 1]}`;
+}
+
+/** "Card 040 gets a line", "Cards 021 and 040 get 3 lines" */
+function winSentence(prize: Prize, ids: string[]) {
+  const what =
+    prize.key === "line"
+      ? "a line"
+      : prize.key === "cross"
+        ? "the cross"
+        : prize.key === "blackout"
+          ? "a blackout"
+          : prize.short.toLowerCase();
+  const who = cardsText(ids, 4);
+  return `${who[0].toUpperCase()}${who.slice(1)} ${ids.length === 1 ? "gets" : "get"} ${what}`;
 }
 
 /** Where a card stands on each prize: won (and since when), or the song it comes up on. */
@@ -167,6 +182,18 @@ export function ClaimChecker({ isAdmin = false }: { isAdmin?: boolean }) {
   const cardId = judge && checked ? findCardId(judge.ids, checked) : null;
   const card = cardId && cards ? (cards.cards.find((c) => c.id === cardId) ?? null) : null;
   const partOf = (n: number) => songsByN.get(n)?.part;
+  const timeOf = (n: number) => songsByN.get(n)?.time ?? null;
+
+  // The song that's on gives a prize to its first winners: the host can expect a call.
+  const winningNow = played > 0 ? prizes.filter(({ first }) => first?.at === played) : [];
+  // Following the player, the next prize to be won and how long until its song starts.
+  const upcoming = session.following ? prizes.filter(({ first }) => first && first.at > played) : [];
+  const nextAt = Math.min(...upcoming.map(({ first }) => first!.at));
+  const nextStart = Number.isFinite(nextAt) ? timeOf(nextAt) : null;
+  const nextWin =
+    nextStart !== null && nextStart > session.time
+      ? { at: nextAt, prizes: upcoming.filter(({ first }) => first!.at === nextAt), wait: nextStart - session.time }
+      : null;
 
   const open = () => dialogRef.current?.showModal();
   const close = () => dialogRef.current?.close();
@@ -229,6 +256,27 @@ export function ClaimChecker({ isAdmin = false }: { isAdmin?: boolean }) {
         )}
       </p>
       <p className="mt-1 text-center text-xs text-fog">{counterNote}</p>
+
+      {winningNow.length > 0 && (
+        <div className="mt-4 rounded-xl border border-sun/60 bg-sun/10 px-3.5 py-3 text-sm" role="status">
+          <p className="flex items-center gap-2 font-bold text-sun">
+            <BellRing size={16} aria-hidden className="shrink-0" /> Listen for a bingo call
+          </p>
+          {winningNow.map(({ prize, first }) => (
+            <p key={prize.label} className="mt-1">
+              {winSentence(prize, first!.ids)} on this song.
+            </p>
+          ))}
+        </div>
+      )}
+      {nextWin && (
+        <p className="mt-3 text-center text-sm" aria-live="off">
+          <span className="text-mist">Next win: </span>
+          <span className="font-semibold">{nextWin.prizes.map(({ prize }) => prize.short).join(" and ")}</span>
+          <span className="text-mist"> on song {nextWin.at}, </span>
+          <span className="font-semibold tabular-nums text-sun">in {formatClock(nextWin.wait)}</span>
+        </p>
+      )}
 
       {judge && (
         <div className="mt-5">
