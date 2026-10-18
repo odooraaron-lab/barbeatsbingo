@@ -125,7 +125,12 @@ export default async function ShowPage({ params }: { params: Promise<{ genre: st
               />
             </div>
           </section>
-          {side && <aside className="order-first lg:sticky lg:top-6 lg:order-none lg:mt-[4.25rem]">{side}</aside>}
+          {side && (
+            // Stays in view beside the call list; if it's taller than the window, it scrolls by itself.
+            <aside className="order-first lg:sticky lg:top-6 lg:order-none lg:mt-[4.25rem] lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto lg:overscroll-contain lg:[scrollbar-width:thin]">
+              {side}
+            </aside>
+          )}
         </div>
       ) : (
         player && <div className="mt-10 max-w-md">{player}</div>

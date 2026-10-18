@@ -2,15 +2,18 @@
 
 import { useId, useMemo, useRef, useState } from "react";
 import { BadgeCheck, Minus, Plus, Search, Star, X } from "lucide-react";
-import { BINGO, songAt, type CallSong } from "@/lib/call-list";
+import { BINGO, type CallSong } from "@/lib/call-list";
 import {
-  PATTERNS,
   cardProgress,
-  findCard,
+  findCardId,
+  judgeFromAnswers,
+  judgeFromCards,
+  nextPrizeWin,
   oneAway,
-  winners,
+  prizeWinners,
   type BingoCard,
   type CardSet,
+  type Judge,
 } from "@/lib/bingo";
 import { useShowSession } from "./show-session";
 
@@ -22,110 +25,121 @@ function splitTitle(title: string) {
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-function CardView({
+/** "card 040", "cards 021 and 040", "cards 021, 040, 077 and 2 more" */
+function cardsText(ids: string[], most = 3) {
+  if (ids.length === 1) return `card ${ids[0]}`;
+  const shown = ids.slice(0, most);
+  const more = ids.length - shown.length;
+  if (more > 0) return `cards ${shown.join(", ")} and ${more} more`;
+  return `cards ${shown.slice(0, -1).join(", ")} and ${shown[shown.length - 1]}`;
+}
+
+/** Where a card stands on each prize: won (and since when), or the song it comes up on. */
+function CardStatus({ judge, id, played }: { judge: Judge; id: string; played: number }) {
+  return (
+    <ul className="grid gap-1.5" aria-label="Where this card stands">
+      {judge.prizes.map((prize, p) => {
+        const at = judge.winAt(id, p);
+        const has = at <= played;
+        return (
+          <li key={p} className={`flex items-baseline gap-2 ${has ? "text-ok" : "text-mist"}`}>
+            {has ? <BadgeCheck size={17} aria-hidden className="shrink-0 translate-y-0.5" /> : <span className="w-[17px] shrink-0" />}
+            <span className={has ? "font-bold" : ""}>{prize.label}</span>
+            <span className="text-sm">
+              {has
+                ? `yes, since song ${at}`
+                : Number.isFinite(at)
+                  ? `not yet: comes up on song ${at} (${plural(at - played, "song", "songs")} to go)`
+                  : "not on this card"}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** The card itself, squares played filled in and complete rows outlined. */
+function CardGrid({
   card,
   set,
   played,
   songsByN,
-  lastN,
 }: {
   card: BingoCard;
   set: CardSet;
   played: number;
   songsByN: Map<number, CallSong>;
-  lastN: number;
 }) {
   const progress = cardProgress(card, set, played);
   const inWin = new Set(progress.done.flatMap((l) => l.cells));
   return (
-    <div>
-      <ul className="grid gap-1.5" aria-label="Where this card stands">
-        {PATTERNS.map((p) => {
-          const at = progress.firstAt[p.key];
-          const has = at <= played;
-          return (
-            <li key={p.key} className={`flex items-baseline gap-2 ${has ? "text-ok" : "text-mist"}`}>
-              {has ? <BadgeCheck size={17} aria-hidden className="shrink-0 translate-y-0.5" /> : <span className="w-[17px]" />}
-              <span className={has ? "font-bold" : ""}>{p.label}</span>
-              <span className="text-sm">
-                {has
-                  ? `yes, since song ${at}`
-                  : Number.isFinite(progress.needs[p.key])
-                    ? `needs ${plural(progress.needs[p.key], "more song", "more songs")}`
-                    : "not on this card"}
+    <div
+      className="mt-5 grid gap-1"
+      style={{ gridTemplateColumns: `repeat(${set.cols}, minmax(0, 1fr))` }}
+      role="table"
+      aria-label={`Card ${card.id}`}
+    >
+      {set.cols === 5 &&
+        BINGO.split("").map((l) => (
+          <div key={l} role="columnheader" className="display pb-1 text-center text-xl text-red-bright">
+            {l}
+          </div>
+        ))}
+      {card.cells.map((n, i) => {
+        const song = n ? songsByN.get(n) : null;
+        const marked = progress.marked[i];
+        const name = song ? splitTitle(song.title) : null;
+        return (
+          <div
+            key={i}
+            role="cell"
+            className={`relative flex min-h-16 flex-col justify-center rounded-md border p-1.5 text-center text-[0.7rem] leading-tight sm:min-h-20 sm:text-xs ${
+              inWin.has(i) ? "border-sun ring-2 ring-sun" : "border-line"
+            } ${marked ? "bg-red/80 text-white" : "bg-ink text-mist"}`}
+          >
+            {n === null ? (
+              <span className="flex flex-col items-center gap-0.5 font-bold text-white">
+                <Star size={16} aria-hidden /> Free
               </span>
-            </li>
-          );
-        })}
-      </ul>
-
-      <div
-        className="mt-5 grid gap-1"
-        style={{ gridTemplateColumns: `repeat(${set.cols}, minmax(0, 1fr))` }}
-        role="table"
-        aria-label={`Card ${card.id}`}
-      >
-        {set.cols === 5 &&
-          BINGO.split("").map((l) => (
-            <div key={l} role="columnheader" className="display pb-1 text-center text-xl text-red-bright">
-              {l}
-            </div>
-          ))}
-        {card.cells.map((n, i) => {
-          const song = n ? songsByN.get(n) : null;
-          const marked = progress.marked[i];
-          const name = song ? splitTitle(song.title) : null;
-          return (
-            <div
-              key={i}
-              role="cell"
-              className={`relative flex min-h-16 flex-col justify-center rounded-md border p-1.5 text-center text-[0.7rem] leading-tight sm:min-h-20 sm:text-xs ${
-                inWin.has(i) ? "border-sun ring-2 ring-sun" : "border-line"
-              } ${marked ? "bg-red/80 text-white" : "bg-ink text-mist"}`}
-            >
-              {n === null ? (
-                <span className="flex flex-col items-center gap-0.5 font-bold text-white">
-                  <Star size={16} aria-hidden /> Free
-                </span>
-              ) : name ? (
-                <>
-                  <span className="font-semibold text-white">{name.song}</span>
-                  {name.artist && <span className={marked ? "text-white/80" : "text-fog"}>{name.artist}</span>}
-                  {n === lastN && <span className="sr-only"> (just played)</span>}
-                </>
-              ) : (
-                <span>Song {n}</span>
-              )}
-              <span className="sr-only">{marked ? ", played" : ", not played yet"}</span>
-              {n === lastN && <span aria-hidden className="absolute right-1 top-1 h-2 w-2 animate-pulse rounded-full bg-sun" />}
-            </div>
-          );
-        })}
-      </div>
+            ) : name ? (
+              <>
+                <span className="font-semibold text-white">{name.song}</span>
+                {name.artist && <span className={marked ? "text-white/80" : "text-fog"}>{name.artist}</span>}
+                {n === played && <span className="sr-only"> (just played)</span>}
+              </>
+            ) : (
+              <span>Song {n}</span>
+            )}
+            <span className="sr-only">{marked ? ", played" : ", not played yet"}</span>
+            {n === played && <span aria-hidden className="absolute right-1 top-1 h-2 w-2 animate-pulse rounded-full bg-sun" />}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 /**
- * Helps the host check a bingo call: how far the show is, the songs played so far
- * (grouped by letter), and, when the show's cards have been read, whether a card
- * really has a winning pattern.
+ * Helps the host run the game and check a bingo call: how far the game is, when each
+ * prize is won and by which cards (from the call list's answer key, or from the cards
+ * once they've been read), whether a card really has a prize, and the songs played so
+ * far by letter.
  */
 export function ClaimChecker({ isAdmin = false }: { isAdmin?: boolean }) {
   const session = useShowSession();
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [override, setOverride] = useState<number | null>(null);
   const [typed, setTyped] = useState("");
   const [checked, setChecked] = useState<string | null>(null);
   const inputId = useId();
 
   const songs = useMemo(() => session?.callList?.songs ?? [], [session?.callList]);
+  const answers = session?.callList?.answers ?? null;
   const cards = session?.cards ?? null;
+  // The answer key is the game's own word on who wins when; the cards say the same.
+  const judge = useMemo(() => (answers ? judgeFromAnswers(answers) : cards ? judgeFromCards(cards) : null), [answers, cards]);
   const songsByN = useMemo(() => new Map(songs.map((s) => [s.n, s])), [songs]);
-
-  const following = songAt(songs, session?.time ?? 0);
-  const followCount = following >= 0 ? songs[following].n : 0;
-  const played = Math.max(0, Math.min(override ?? followCount, songs.length));
+  const played = session?.played ?? 0;
   const last = songsByN.get(played) ?? null;
 
   const byLetter = useMemo(() => {
@@ -135,52 +149,114 @@ export function ClaimChecker({ isAdmin = false }: { isAdmin?: boolean }) {
     return groups;
   }, [songs, played]);
 
-  const live = useMemo(
+  const prizes = useMemo(
     () =>
-      cards
-        ? PATTERNS.map((p) => ({
-            pattern: p,
-            winners: winners(cards, p.key, played),
-            close: oneAway(cards, p.key, played),
+      judge
+        ? judge.prizes.map((prize, p) => ({
+            prize,
+            first: nextPrizeWin(judge, p, 0),
+            won: prizeWinners(judge, p, played),
+            next: nextPrizeWin(judge, p, played),
+            close: cards && prize.key ? oneAway(cards, prize.key, played).map((c) => c.id) : [],
           }))
         : [],
-    [cards, played],
+    [judge, cards, played],
   );
 
   if (!session || songs.length === 0) return null;
-  const card = cards && checked ? findCard(cards, checked) : null;
-  // The next pattern nobody has yet, and the ones already won.
-  const firstLive = live.find((l) => l.winners.length === 0) ?? null;
-  const won = live.filter((l) => l.winners.length > 0);
+  const cardId = judge && checked ? findCardId(judge.ids, checked) : null;
+  const card = cardId && cards ? (cards.cards.find((c) => c.id === cardId) ?? null) : null;
+  const partOf = (n: number) => songsByN.get(n)?.part;
 
   const open = () => dialogRef.current?.showModal();
   const close = () => dialogRef.current?.close();
-  const step = (by: number) => setOverride(Math.max(0, Math.min(songs.length, played + by)));
+  const step = (by: number) => session.setPlayed(Math.max(0, Math.min(songs.length, played + by)));
+
+  const counter = (big: boolean) => (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm px-2.5"
+        onClick={() => step(-1)}
+        disabled={played === 0}
+        aria-label="One song back"
+      >
+        <Minus size={16} aria-hidden />
+      </button>
+      <p className={`min-w-0 text-center ${big ? "flex-1" : ""}`}>
+        <output className="display text-3xl tabular-nums" aria-live="polite">
+          {played}
+        </output>
+        <span className="text-sm text-mist"> of {songs.length} played</span>
+      </p>
+      <button
+        type="button"
+        className={`btn btn-sm px-2.5 ${big ? "btn-sun" : "btn-ghost"}`}
+        onClick={() => step(1)}
+        disabled={played >= songs.length}
+        aria-label="Next song"
+      >
+        <Plus size={16} aria-hidden />
+      </button>
+    </div>
+  );
+
+  const counterNote = session.following ? (
+    "Following the player."
+  ) : session.timed && session.hasPlayer ? (
+    <button type="button" className="text-sun underline underline-offset-4" onClick={() => session.setPlayed(null)}>
+      Follow the player again
+    </button>
+  ) : (
+    "Press + as each song starts, or tap it on the call list."
+  );
 
   return (
     <section className="panel mt-4 p-5 sm:p-6" aria-labelledby="checker-heading">
       <h2 id="checker-heading" className="flex items-center gap-2 font-sans text-lg font-bold">
         <BadgeCheck size={20} aria-hidden className="text-sun" /> Check a bingo
       </h2>
-      <p className="mt-1 text-sm text-mist">
-        {played === 0 ? "No songs played yet." : `${played} of ${songs.length} songs played.`}
+
+      <div className="mt-3">{counter(true)}</div>
+      <p className="mt-1.5 text-center text-sm text-mist">
+        {last ? (
+          <>
+            Song {last.n}
+            {last.part ? ` (${last.part})` : ""}: <span className="text-white">{last.title}</span>
+          </>
+        ) : (
+          "No songs played yet."
+        )}
       </p>
-      {cards && won.length > 0 && (
-        <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Cards that have won so far">
-          {won.map((l) => (
-            <li key={l.pattern.key} className="rounded-full bg-ok/15 px-2.5 py-0.5 text-sm font-semibold text-ok">
-              {l.pattern.short}: {plural(l.winners.length, "card", "cards")}
-            </li>
-          ))}
-        </ul>
+      <p className="mt-1 text-center text-xs text-fog">{counterNote}</p>
+
+      {judge && (
+        <div className="mt-5">
+          <h3 className="font-sans text-sm font-semibold text-mist">When prizes are won</h3>
+          <ul className="mt-2 grid text-sm" aria-label="When each prize is won">
+            {prizes.map(({ prize, first, won }, p) => (
+              <li key={p} className="flex items-baseline justify-between gap-3 border-t border-line/70 py-1.5 first:border-0">
+                <span className={`flex items-center gap-1.5 font-semibold ${won.length ? "text-ok" : ""}`}>
+                  {won.length > 0 && <BadgeCheck size={15} aria-hidden className="shrink-0" />}
+                  {prize.short}
+                </span>
+                <span className={`text-right ${won.length ? "text-ok" : "text-mist"}`}>
+                  {first ? (
+                    <>
+                      {won.length ? "won on " : ""}song {first.at} · {cardsText(first.ids, 2)}
+                    </>
+                  ) : (
+                    "nobody"
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
-      {cards && firstLive && firstLive.close.length > 0 && (
-        <p className="mt-2 text-sm text-sun">
-          {plural(firstLive.close.length, "card is", "cards are")} one song from {firstLive.pattern.short.toLowerCase()}.
-        </p>
-      )}
+
       <button type="button" onClick={open} className="btn btn-sun mt-4 w-full">
-        <Search size={17} aria-hidden /> {cards ? "Check a card" : "See songs played"}
+        <Search size={17} aria-hidden /> {judge ? "Check a card" : "See songs played"}
       </button>
 
       <dialog
@@ -204,19 +280,9 @@ export function ClaimChecker({ isAdmin = false }: { isAdmin?: boolean }) {
               <span id="played-label" className="font-semibold">
                 Songs played
               </span>
-              <div className="flex items-center gap-1">
-                <button type="button" className="btn btn-ghost btn-sm px-2" onClick={() => step(-1)} aria-label="One song fewer">
-                  <Minus size={16} aria-hidden />
-                </button>
-                <output className="display min-w-12 text-center text-3xl tabular-nums" aria-live="polite">
-                  {played}
-                </output>
-                <button type="button" className="btn btn-ghost btn-sm px-2" onClick={() => step(1)} aria-label="One song more">
-                  <Plus size={16} aria-hidden />
-                </button>
-              </div>
-              {override !== null && session.hasPlayer && (
-                <button type="button" className="text-sm text-sun underline underline-offset-4" onClick={() => setOverride(null)}>
+              {counter(false)}
+              {!session.following && session.timed && session.hasPlayer && (
+                <button type="button" className="text-sm text-sun underline underline-offset-4" onClick={() => session.setPlayed(null)}>
                   Follow the player again
                 </button>
               )}
@@ -224,18 +290,19 @@ export function ClaimChecker({ isAdmin = false }: { isAdmin?: boolean }) {
             <p className="mt-2 text-sm text-mist">
               {last ? (
                 <>
-                  Up to song {last.n}: <span className="text-white">{last.title}</span>.{" "}
+                  Up to song {last.n}
+                  {last.part ? ` (${last.part})` : ""}: <span className="text-white">{last.title}</span>.{" "}
                 </>
               ) : (
                 "Nothing played yet. "
               )}
-              {override === null && session.hasPlayer
+              {session.following
                 ? "Following the player. If your game is on the venue screen, set the last song played with − and +."
                 : "Set this to the last song played in your game."}
             </p>
           </section>
 
-          {cards ? (
+          {judge ? (
             <>
               <section aria-labelledby="card-heading">
                 <h3 id="card-heading" className="font-sans text-lg font-bold">
@@ -264,16 +331,20 @@ export function ClaimChecker({ isAdmin = false }: { isAdmin?: boolean }) {
                     Check
                   </button>
                 </form>
-                <p className="mt-2 text-sm text-fog">Lines are rows across. Winning rows are outlined in yellow.</p>
-                {checked !== null && !card && (
+                <p className="mt-2 text-sm text-fog">
+                  Lines are rows across. The cross is both diagonals.
+                  {judge.source === "answers" ? " Checked against the answer key on the call list." : ""}
+                </p>
+                {checked !== null && !cardId && (
                   <p className="alert alert-error mt-4" role="alert">
                     There&apos;s no card {checked.trim() || "with that number"} in this game. Check the number on the scorecard.
                   </p>
                 )}
-                {card && (
+                {cardId && (
                   <div className="mt-5" aria-live="polite">
-                    <h4 className="mb-3 font-sans font-bold">Card {card.id}</h4>
-                    <CardView card={card} set={cards} played={played} songsByN={songsByN} lastN={played} />
+                    <h4 className="mb-3 font-sans font-bold">Card {cardId}</h4>
+                    <CardStatus judge={judge} id={cardId} played={played} />
+                    {card && cards && <CardGrid card={card} set={cards} played={played} songsByN={songsByN} />}
                   </div>
                 )}
               </section>
@@ -283,26 +354,33 @@ export function ClaimChecker({ isAdmin = false }: { isAdmin?: boolean }) {
                   Who could be calling
                 </h3>
                 <ul className="mt-3 grid gap-3">
-                  {live.map(({ pattern, winners: won, close: nearly }) => (
-                    <li key={pattern.key} className="rounded-xl border border-line bg-ink/60 p-3">
-                      <p className="font-semibold">{pattern.label}</p>
+                  {prizes.map(({ prize, won, next, close: nearly }, p) => (
+                    <li key={p} className="rounded-xl border border-line bg-ink/60 p-3">
+                      <p className="font-semibold">{prize.label}</p>
                       <p className="mt-1 text-sm text-mist">
                         {won.length ? (
                           <span className="text-ok">
                             Won by{" "}
                             {won
                               .slice(0, 10)
-                              .map((w) => `card ${w.card.id} (song ${w.at})`)
+                              .map((w) => `card ${w.id} (song ${w.at})`)
                               .join(", ")}
-                            {won.length > 10 && ` and ${won.length - 10} more`}
+                            {won.length > 10 && ` and ${won.length - 10} more`}.
                           </span>
                         ) : (
                           "No card has it yet."
                         )}
-                        {nearly.length > 0 && (
+                        {next && (
                           <span className="text-sun">
                             {" "}
-                            One song away: {nearly.slice(0, 12).map((c) => c.id).join(", ")}
+                            Next: {cardsText(next.ids, 6)} on song {next.at}
+                            {partOf(next.at) ? ` (${partOf(next.at)})` : ""}.
+                          </span>
+                        )}
+                        {nearly.length > 0 && (
+                          <span>
+                            {" "}
+                            One song away: {nearly.slice(0, 12).join(", ")}
                             {nearly.length > 12 && ` and ${nearly.length - 12} more`}.
                           </span>
                         )}
@@ -315,8 +393,8 @@ export function ClaimChecker({ isAdmin = false }: { isAdmin?: boolean }) {
           ) : (
             isAdmin && (
               <p className="alert alert-info text-sm">
-                Card checking switches on once this show&apos;s scorecards can be read. Until then, check a card against
-                the songs below.
+                Card checking switches on when the call list has an answer key, or once this show&apos;s scorecards can be
+                read. Until then, check a card against the songs below.
               </p>
             )
           )}

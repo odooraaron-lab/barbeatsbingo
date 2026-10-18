@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Download } from "lucide-react";
 import type { PageViewport, PDFDocumentProxy } from "pdfjs-dist";
-import { formatClock, parseCallList, songAt, type PdfTextItem, type PlacedSong } from "@/lib/call-list";
+import { formatClock, parseCallList, type PdfTextItem, type PlacedSong } from "@/lib/call-list";
 import { useShowSession } from "./show-session";
 
 type Status = "loading" | "ready" | "error";
@@ -15,8 +15,9 @@ type Spot = PlacedSong & { left: number; top: number; width: number; height: num
  * Draws the track list PDF onto the page, one canvas per page, so it sits in the
  * layout on every device (phones don't show PDFs inside pages reliably).
  *
- * When it's a call list with times, the song that's playing lights up as the player
- * plays, and tapping a song jumps the show there.
+ * When it's a call list, the song that's playing lights up. With times, it follows the
+ * player and tapping a song jumps the show there; without, the host taps each song as
+ * it plays, which keeps the bingo checker's count.
  */
 export function TrackListViewer({ src, downloadHref, title }: { src: string; downloadHref: string; title: string }) {
   const [status, setStatus] = useState<Status>("loading");
@@ -139,9 +140,8 @@ export function TrackListViewer({ src, downloadHref, title }: { src: string; dow
     };
   }, [pages]);
 
-  const songs = session?.callList?.songs ?? null;
-  const current = songs && spots.length ? songAt(songs, session?.time ?? 0) : -1;
-  const currentN = current >= 0 && songs ? songs[current].n : 0;
+  const timed = session?.timed ?? false;
+  const currentN = session && spots.length ? session.played : 0;
   const interactive = spots.length > 0 && !!session;
 
   return (
@@ -161,7 +161,9 @@ export function TrackListViewer({ src, downloadHref, title }: { src: string; dow
       )}
       {interactive && status === "ready" && (
         <p className="mb-3 text-sm text-mist">
-          The song that&apos;s playing lights up. Tap a song to jump there.
+          {timed
+            ? "The song that's playing lights up. Tap a song to jump there."
+            : "Tap each song as it starts, so the bingo checker knows how far the game is."}
         </p>
       )}
       <div className={`grid gap-4 ${status === "ready" ? "" : "h-0 overflow-hidden"}`}>
@@ -188,9 +190,20 @@ export function TrackListViewer({ src, downloadHref, title }: { src: string; dow
                     <button
                       key={s.n}
                       type="button"
-                      onClick={() => session.seekTo(s.time)}
+                      onClick={() => {
+                        if (s.time === null) {
+                          session.setPlayed(s.n);
+                        } else {
+                          session.setPlayed(null);
+                          session.seekTo(s.time);
+                        }
+                      }}
                       aria-current={isCurrent ? "true" : undefined}
-                      aria-label={`Song ${s.n}, ${s.letter}: ${s.title}, at ${formatClock(s.time)}${isCurrent ? ", playing now" : ""}. Jump here.`}
+                      aria-label={
+                        s.time === null
+                          ? `Song ${s.n}, ${s.letter}: ${s.title}${isCurrent ? ", playing now" : ""}. Mark as playing.`
+                          : `Song ${s.n}, ${s.letter}: ${s.title}, at ${formatClock(s.time)}${isCurrent ? ", playing now" : ""}. Jump here.`
+                      }
                       className={`absolute rounded-[3px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sun ${
                         isCurrent
                           ? "bg-red/25 ring-2 ring-red"

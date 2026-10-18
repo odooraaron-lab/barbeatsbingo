@@ -20,7 +20,7 @@ export const SHOW_SLOTS = [
   {
     key: "tracklist",
     label: "Track list",
-    hint: "The track list PDF. Customers also see it on the show page.",
+    hint: "The call list (track list) PDF. Customers see it on the show page, and the bingo checker reads its songs and answer key.",
     kinds: ["host_sheet"] as FileKind[],
   },
   {

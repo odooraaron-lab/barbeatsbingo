@@ -201,8 +201,9 @@ export function AudioPlayer({
     report?.(rawTime, playing);
   }, [report, rawTime, playing]);
 
-  const songs = session?.callList?.songs ?? null;
-  // Before the first song (e.g. while the file is still loading) it's about to be song 1.
+  // The song playing, when the call list says when each song starts. Before the first
+  // song (e.g. while the file is still loading) it's about to be song 1.
+  const songs = session?.timed ? (session.callList?.songs ?? null) : null;
   const nowIndex = songs?.length ? Math.max(0, songAt(songs, rawTime)) : -1;
   const now = songs && nowIndex >= 0 ? songs[nowIndex] : null;
 

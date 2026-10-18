@@ -14,6 +14,7 @@ import { Breadcrumbs } from "@/components/portal/breadcrumbs";
 import { FileIcon } from "@/components/portal/file-icon";
 import { addLinkFile, deleteFile, deletePlaylist, saveShowFiles, updateFile, updatePlaylist } from "../../actions";
 import { INTRO_SKIP_SECONDS, SHOW_SLOTS, filesBySlot } from "@/lib/show-files";
+import { hasTimes } from "@/lib/call-list";
 import { Uploader } from "./uploader";
 
 export const metadata: Metadata = { title: "Show" };
@@ -142,7 +143,12 @@ export default async function PlaylistAdminPage({ params }: { params: Promise<{ 
                             {slot.key === "tracklist" && current.meta?.callList && (
                               <>
                                 {" "}
-                                · {current.meta.callList.songs.length} songs read, so the call list follows the player
+                                · {current.meta.callList.songs.length} songs read
+                                {hasTimes(current.meta.callList.songs)
+                                  ? ", so the call list follows the player"
+                                  : " (no start times, so hosts tap each song as it plays)"}
+                                {current.meta.callList.answers &&
+                                  ` · answer key for ${current.meta.callList.answers.cards.length} cards, so the bingo checker knows when each card wins`}
                               </>
                             )}
                           </>

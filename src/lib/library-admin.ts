@@ -154,7 +154,8 @@ export async function applyShowLinks(show: { id: string; name: string }, input: 
     !p.current.fileName ||
     (p.slot.key === "preview" && (p.current.streamDirect === null || p.current.durationSeconds === null)) ||
     ((p.slot.key === "show" || p.slot.key === "preview") && p.current.byteRanges === null) ||
-    (p.slot.key === "tracklist" && !p.current.meta?.callList);
+    // Read again if it was never read, or was read before the site looked for answer keys.
+    (p.slot.key === "tracklist" && (!p.current.meta?.callList || p.current.meta.callList.answers === undefined));
 
   // Check new or changed links so we can grab the real file name and spot mistakes.
   const checks: (LinkCheck | null)[] = await Promise.all(
@@ -207,7 +208,7 @@ export async function applyShowLinks(show: { id: string; name: string }, input: 
       meta = callList ? { ...meta, callList } : null;
       if (!callList) {
         warnings.push(
-          `${p.slot.label}: we couldn't read the songs and times from this PDF, so it won't follow the player.`,
+          `${p.slot.label}: we couldn't read the songs from this PDF, so the bingo checker can't use it.`,
         );
       }
     }

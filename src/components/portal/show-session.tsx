@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
-import type { CallList } from "@/lib/call-list";
+import { hasTimes, songAt, type CallList, type CallSong } from "@/lib/call-list";
 import type { CardSet } from "@/lib/bingo";
 
 /** What the player lets other parts of the page do to it. */
@@ -16,6 +16,17 @@ type ShowSessionValue = {
   playing: boolean;
   callList: CallList | null;
   cards: CardSet | null;
+  /** True when the call list says when each song starts, so the songs can follow the player. */
+  timed: boolean;
+  /**
+   * How many songs of the call list have played: followed from the player when the
+   * call list has times, otherwise (or once the host sets it) as the host sets it.
+   */
+  played: number;
+  /** True while `played` follows the player. */
+  following: boolean;
+  /** The host sets how many songs have played; null goes back to following the player. */
+  setPlayed: (n: number | null) => void;
   /** The player reports its position as it plays. */
   report: (time: number, playing: boolean) => void;
   /** Jump the show to a point, e.g. when a song on the call list is tapped. */
@@ -27,6 +38,7 @@ type ShowSessionValue = {
 };
 
 const ShowSessionContext = createContext<ShowSessionValue | null>(null);
+const NO_SONGS: CallSong[] = [];
 
 /**
  * Ties a show page together: the player, the call list and the card checker all
@@ -45,6 +57,7 @@ export function ShowSession({
   const [playing, setPlaying] = useState(false);
   const [offered, setOffered] = useState<CallList | null>(null);
   const [hasPlayer, setHasPlayer] = useState(false);
+  const [override, setOverride] = useState<number | null>(null);
   const player = useRef<PlayerHandle | null>(null);
 
   const report = useCallback((t: number, p: boolean) => {
@@ -66,19 +79,37 @@ export function ShowSession({
     setHasPlayer(!!handle);
   }, []);
 
+  const callList = useMemo(() => {
+    if (!initialCallList) return offered;
+    // Read before the site looked for answer keys: use the one read from the PDF here.
+    if (initialCallList.answers === undefined && offered?.answers) return { ...initialCallList, answers: offered.answers };
+    return initialCallList;
+  }, [initialCallList, offered]);
+
+  const songs = callList?.songs ?? NO_SONGS;
+  const timed = hasTimes(songs);
+  const followIndex = timed ? songAt(songs, time) : -1;
+  const followed = followIndex >= 0 ? songs[followIndex].n : 0;
+  const played = Math.max(0, Math.min(override ?? followed, songs.length));
+  const following = timed && override === null;
+
   const value = useMemo<ShowSessionValue>(
     () => ({
       time,
       playing,
-      callList: initialCallList ?? offered,
+      callList,
       cards,
+      timed,
+      played,
+      following,
+      setPlayed: setOverride,
       report,
       seekTo,
       offerCallList,
       registerPlayer,
       hasPlayer,
     }),
-    [time, playing, initialCallList, offered, cards, report, seekTo, offerCallList, registerPlayer, hasPlayer],
+    [time, playing, callList, cards, timed, played, following, report, seekTo, offerCallList, registerPlayer, hasPlayer],
   );
 
   return <ShowSessionContext.Provider value={value}>{children}</ShowSessionContext.Provider>;
