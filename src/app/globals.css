@@ -296,6 +296,7 @@
   *::after {
     animation-duration: 0.001ms !important;
     animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
 }
@@ -410,7 +411,9 @@
   color: #fff;
 }
 
-/* The music video. Each song cuts in from black and the camera slowly pushes in. */
+/* The music video. Each song cuts in from black and the camera slowly pushes in.
+   No performers: real-looking shots (a microphone in a spotlight, a record, a
+   mirror ball, palms at sunset, a city at night), each in the song's colour. */
 .show-video {
   position: absolute;
   inset: 0;
@@ -426,119 +429,425 @@
   from { transform: scale(1.005); }
   to { transform: scale(1.065); }
 }
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 .show-video-sky {
   position: absolute;
   inset: 0;
 }
-.is-stage .show-video-sky {
-  background:
-    radial-gradient(26% 50% at var(--at) 46%, hsl(var(--hue) 100% 93%) 0%, hsl(var(--hue) 95% 70%) 22%, hsl(var(--hue) 88% 42%) 52%, transparent 80%),
-    radial-gradient(70% 80% at var(--at) 60%, hsl(var(--hue) 80% 24%), transparent 75%),
-    #050407;
+.show-shot {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
 }
-.is-sunset .show-video-sky {
+
+/* A microphone on its stand in a spotlight. The beam is a cone of light from a
+   point above the shot: a conic gradient, soft-edged without any blur. */
+.is-mic {
+  background:
+    radial-gradient(50% 60% at 69.4% 100%, hsl(var(--hue) 45% 13%), transparent 75%),
+    #040406;
+}
+.show-mic-beam {
+  position: absolute;
+  inset: 0;
+  background: conic-gradient(
+    from 156deg at 69.4% -12%,
+    transparent 0deg,
+    hsl(var(--hue) 70% 88% / 0.3) 7deg,
+    hsl(var(--hue) 70% 93% / 0.5) 24deg,
+    hsl(var(--hue) 70% 88% / 0.3) 41deg,
+    transparent 48deg
+  );
+  mask-image: linear-gradient(180deg, #000 8%, rgb(0 0 0 / 0.45) 75%, rgb(0 0 0 / 0.25));
+  mix-blend-mode: screen;
+  animation: beam-breathe 5s ease-in-out infinite alternate;
+}
+@keyframes beam-breathe {
+  from { opacity: 0.82; }
+  to { opacity: 1; }
+}
+.show-mic-pool {
+  position: absolute;
+  left: 69.4%;
+  bottom: -7%;
+  width: 66%;
+  height: 26%;
+  translate: -50% 0;
+  background: radial-gradient(closest-side, hsl(var(--hue) 70% 86% / 0.6), hsl(var(--hue) 70% 60% / 0.18) 55%, transparent);
+}
+.show-mic-shine {
+  stop-color: hsl(var(--hue) 35% 86%);
+}
+.show-dust i {
+  position: absolute;
+  width: 0.45cqw;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: hsl(var(--hue) 60% 94% / 0.9);
+  animation: dust 7s linear infinite;
+}
+.show-dust i:nth-child(1) { left: 63.5%; top: 12%; }
+.show-dust i:nth-child(2) { left: 72.5%; top: 22%; animation-delay: -2.5s; animation-duration: 8s; }
+.show-dust i:nth-child(3) { left: 66.5%; top: 44%; animation-delay: -4s; }
+.show-dust i:nth-child(4) { left: 76.5%; top: 50%; animation-delay: -1s; animation-duration: 9s; }
+.show-dust i:nth-child(5) { left: 59.5%; top: 58%; animation-delay: -5.5s; }
+.show-dust i:nth-child(6) { left: 80.5%; top: 34%; animation-delay: -3.2s; animation-duration: 6.5s; }
+.show-dust i:nth-child(7) { left: 69.5%; top: 66%; animation-delay: -6s; width: 0.3cqw; }
+.show-dust i:nth-child(8) { left: 55.5%; top: 70%; animation-delay: -0.6s; width: 0.3cqw; }
+.show-dust i:nth-child(9) { left: 83.5%; top: 64%; animation-delay: -4.6s; width: 0.35cqw; }
+.show-dust i:nth-child(10) { left: 67.5%; top: 6%; animation-delay: -2s; width: 0.35cqw; }
+@keyframes dust {
+  0% { transform: translate(0, 0); opacity: 0; }
+  15%,
+  80% { opacity: 1; }
+  100% { transform: translate(1.6cqw, 7cqw); opacity: 0; }
+}
+
+/* A record spinning, the player's arm resting on it */
+.is-vinyl {
+  background:
+    radial-gradient(70% 90% at 18% 0%, hsl(var(--hue) 70% 36% / 0.55), transparent 62%),
+    radial-gradient(60% 60% at 100% 100%, hsl(calc(var(--hue) + 40) 70% 28% / 0.45), transparent 70%),
+    linear-gradient(160deg, #141218, #060508);
+}
+.show-vinyl {
+  position: absolute;
+  left: 44%;
+  top: 64%;
+  width: 88%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%) scaleY(0.62);
+}
+/* Fine grooves; the smooth gaps between songs; the plain run-out round the label; a lit edge */
+.show-vinyl-disc {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle closest-side, #0b0b0e 0 40%, transparent 40.6%),
+    radial-gradient(
+      circle closest-side,
+      transparent 0 52%,
+      rgb(0 0 0 / 0.6) 52.4% 53.4%,
+      transparent 53.8% 63.5%,
+      rgb(0 0 0 / 0.6) 63.9% 64.9%,
+      transparent 65.3% 75%,
+      rgb(0 0 0 / 0.6) 75.4% 76.4%,
+      transparent 76.8% 86.5%,
+      rgb(0 0 0 / 0.6) 86.9% 87.9%,
+      transparent 88.3%
+    ),
+    radial-gradient(circle closest-side, transparent 0 96.4%, rgb(255 255 255 / 0.12) 97.6%, #060608 98.6%),
+    repeating-radial-gradient(circle closest-side, #0c0c0f 0 0.5%, #18181e 0.75% 1.1%);
+  box-shadow:
+    0 0 0 0.35cqw #040405,
+    0 0 6cqw hsl(var(--hue) 90% 55% / 0.4);
+  animation: spin 1.8s linear infinite;
+}
+.show-vinyl-label {
+  position: absolute;
+  left: 33.5%;
+  top: 33.5%;
+  width: 33%;
+  height: 33%;
+  overflow: visible;
+}
+.show-label-paper {
+  fill: hsl(var(--hue) 62% 44%);
+}
+.show-label-ring {
+  fill: none;
+  stroke: hsl(var(--hue) 70% 76% / 0.55);
+  stroke-width: 0.8;
+}
+.show-label-text {
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: 0.6px;
+  fill: hsl(var(--hue) 60% 94%);
+}
+.show-label-small {
+  font-family: var(--font-sans);
+  font-size: 6px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  fill: hsl(var(--hue) 60% 92% / 0.8);
+}
+.show-label-spindle {
+  fill: #cfd0d6;
+}
+/* The light on the record stays put while the record turns under it */
+.show-vinyl-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 300deg,
+    transparent 0deg,
+    rgb(255 255 255 / 0.16) 26deg,
+    transparent 52deg,
+    transparent 180deg,
+    rgb(255 255 255 / 0.11) 206deg,
+    transparent 232deg
+  );
+  mask-image: radial-gradient(circle closest-side, transparent 0 34%, #000 36%);
+  mix-blend-mode: screen;
+}
+.show-tonearm {
+  filter: drop-shadow(-0.4cqw 1.1cqw 0.7cqw rgb(0 0 0 / 0.65));
+}
+.show-tonearm-plate {
+  fill: #17181d;
+  stroke: #34363f;
+  stroke-width: 0.3;
+}
+.show-tonearm-cap {
+  fill: #9a9ea9;
+}
+.show-tonearm-head {
+  fill: #1f2026;
+  stroke: #5a5d68;
+  stroke-width: 0.25;
+}
+.show-tonearm-cartridge {
+  fill: #0b0b0e;
+}
+
+/* A mirror ball in a spotlight. The spots it throws are two layers drifting round
+   at different speeds (moved, never redrawn), and its facets catch the light in turns. */
+.is-disco {
+  background:
+    radial-gradient(36% 52% at 50% 52%, hsl(var(--hue) 80% 40% / 0.55), transparent 70%),
+    radial-gradient(100% 60% at 50% 115%, hsl(calc(var(--hue) + 40) 80% 30% / 0.5), transparent 70%),
+    #050408;
+}
+.show-disco-spots {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  mask-image: radial-gradient(60% 75% at 50% 52%, rgb(0 0 0 / 0.2) 0 14%, #000 46%);
+}
+.show-disco-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 200%;
+  height: 100%;
+  animation: spots 18s linear infinite;
+  will-change: transform;
+}
+.show-disco-layer-1 {
+  opacity: 0.6;
+  animation-duration: 27s;
+}
+@keyframes spots {
+  to { transform: translateX(-50%); }
+}
+.show-disco-tint {
+  stop-color: hsl(var(--hue) 100% 80%);
+}
+.show-disco-rays {
+  position: absolute;
+  left: 50%;
+  top: 52.2%;
+  width: 160%;
+  aspect-ratio: 1;
+  margin: -80% 0 0 -80%;
+  background:
+    repeating-conic-gradient(hsl(var(--hue) 100% 88% / 0.12) 0deg 0.9deg, transparent 0.9deg 13deg),
+    repeating-conic-gradient(from 5deg, hsl(var(--hue) 100% 92% / 0.08) 0deg 0.6deg, transparent 0.6deg 21deg);
+  mask-image: radial-gradient(circle, #000 0 7%, rgb(0 0 0 / 0.3) 26%, transparent 48%);
+  animation: spin 50s linear infinite;
+}
+/* The pin spot on the ball, a shaft of light through the haze from the top left */
+.show-disco-pin {
+  position: absolute;
+  inset: 0;
+  background: conic-gradient(
+    from 115deg at -10% -20%,
+    transparent 0deg,
+    hsl(var(--hue) 40% 92% / 0.15) 4deg,
+    hsl(var(--hue) 40% 92% / 0.15) 13deg,
+    transparent 17deg
+  );
+  mask-image: radial-gradient(circle at -10% -20%, #000 0 50%, transparent 68%);
+  mix-blend-mode: screen;
+}
+.show-disco-cord {
+  stroke: #3a3a42;
+  stroke-width: 0.45;
+}
+.show-disco-base {
+  fill: #060608;
+}
+.show-disco-shade-0 { fill: #0e0e13; }
+.show-disco-shade-1 { fill: #25252d; }
+.show-disco-shade-2 { fill: #4d4d58; }
+.show-disco-shade-3 { fill: hsl(var(--hue) 70% 62%); }
+.show-disco-shade-4 { fill: #c4c5cf; }
+.show-disco-shade-5 { fill: #fff; }
+.show-disco-flash {
+  fill: #fff;
+  opacity: 0;
+  animation: flash 1.2s steps(1) infinite;
+}
+.show-disco-flash-1 {
+  animation-delay: -0.6s;
+}
+@keyframes flash {
+  50% { opacity: 0.9; }
+}
+.show-disco-glint {
+  position: absolute;
+  width: 7cqw;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  background:
+    radial-gradient(closest-side, #fff, rgb(255 255 255 / 0.7) 25%, rgb(255 255 255 / 0)) 50% 50% / 100% 5% no-repeat,
+    radial-gradient(closest-side, #fff, rgb(255 255 255 / 0.7) 25%, rgb(255 255 255 / 0)) 50% 50% / 5% 100% no-repeat,
+    radial-gradient(closest-side, #fff, hsl(var(--hue) 100% 85% / 0.4) 45%, transparent) 50% 50% / 30% 30% no-repeat;
+  opacity: 0;
+  animation: glint 2.4s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+@keyframes glint {
+  0%,
+  100% { transform: scale(0.15) rotate(0deg); opacity: 0; }
+  50% { transform: scale(1) rotate(20deg); opacity: 1; }
+}
+
+/* Palms against a low sun. The fronds sway on their own layers, so the
+   detailed drawing is only moved, never redrawn. */
+.is-palms .show-video-sky {
   background: linear-gradient(
     180deg,
     hsl(calc(var(--hue) + 250) 40% 16%) 0%,
     hsl(calc(var(--hue) - 15) 70% 38%) 36%,
     hsl(var(--hue) 95% 58%) 60%,
-    hsl(calc(var(--hue) + 16) 100% 74%) 71%,
-    hsl(var(--hue) 60% 26%) 71.5%,
-    hsl(var(--hue) 50% 10%) 100%
+    hsl(calc(var(--hue) + 16) 100% 74%) 71%
   );
-}
-.is-city .show-video-sky {
-  background:
-    radial-gradient(34% 46% at var(--at) 50%, hsl(var(--hue) 70% 72% / 0.85), transparent 72%),
-    linear-gradient(180deg, #03050b 0%, hsl(var(--hue) 55% 16%) 100%);
-}
-.is-club .show-video-sky {
-  background:
-    radial-gradient(30% 52% at var(--at) 46%, hsl(var(--hue) 100% 86%) 0%, hsl(var(--hue) 100% 58% / 0.85) 26%, transparent 70%),
-    radial-gradient(90% 60% at 50% 100%, hsl(calc(var(--hue) + 60) 90% 40% / 0.5), transparent 70%),
-    #040306;
 }
 .show-sun {
   position: absolute;
   left: calc(var(--at) - 14%);
-  top: 34%;
+  top: 38%;
   width: 28%;
   aspect-ratio: 1;
   border-radius: 50%;
   background: radial-gradient(circle closest-side, #fffaf0 0 46%, hsl(calc(var(--hue) + 22) 100% 80%) 62%, hsl(var(--hue) 100% 66% / 0) 100%);
 }
-.show-bokeh i {
+/* Thin streaks of cloud across the sun */
+.show-clouds {
   position: absolute;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(circle closest-side, hsl(var(--hue) 100% 82% / 0.32) 0 60%, hsl(var(--hue) 100% 82% / 0) 100%);
-  animation: bokeh-drift 9s ease-in-out infinite alternate;
+  inset: 0;
+  background:
+    radial-gradient(34% 1.4% at calc(var(--at) - 8%) 50.5%, hsl(calc(var(--hue) - 25) 50% 26% / 0.6), transparent),
+    radial-gradient(15% 1.1% at calc(var(--at) + 7%) 56%, hsl(calc(var(--hue) - 25) 50% 28% / 0.5), transparent),
+    radial-gradient(46% 2.4% at calc(var(--at) + 2%) 44%, hsl(calc(var(--hue) - 20) 45% 30% / 0.22), transparent),
+    radial-gradient(42% 2.6% at calc(var(--at) - 18%) 31%, hsl(calc(var(--hue) + 10) 80% 62% / 0.16), transparent),
+    radial-gradient(30% 1.8% at calc(var(--at) + 26%) 40%, hsl(calc(var(--hue) + 10) 80% 62% / 0.12), transparent);
 }
-.show-bokeh i:nth-child(1) { left: 6%; top: 52%; width: 7%; }
-.show-bokeh i:nth-child(2) { left: 16%; top: 28%; width: 4.5%; animation-delay: -2s; }
-.show-bokeh i:nth-child(3) { left: 24%; top: 62%; width: 9%; animation-delay: -5s; filter: hue-rotate(40deg); }
-.show-bokeh i:nth-child(4) { left: 70%; top: 20%; width: 6%; animation-delay: -1s; }
-.show-bokeh i:nth-child(5) { left: 80%; top: 50%; width: 10%; animation-delay: -6s; filter: hue-rotate(-50deg); }
-.show-bokeh i:nth-child(6) { left: 90%; top: 30%; width: 5%; animation-delay: -3s; }
-.show-bokeh i:nth-child(7) { left: 62%; top: 66%; width: 5.5%; animation-delay: -7s; }
-.show-bokeh i:nth-child(8) { left: 36%; top: 14%; width: 3.6%; animation-delay: -4s; }
-.show-bokeh i:nth-child(9) { left: 2%; top: 14%; width: 5%; animation-delay: -8s; filter: hue-rotate(30deg); }
-@keyframes bokeh-drift {
-  from { translate: 0 0; }
-  to { translate: 2cqw -1.2cqw; }
-}
-.show-beams i {
+.show-sea {
   position: absolute;
-  top: -12%;
-  width: 20%;
-  height: 135%;
-  background: linear-gradient(180deg, hsl(var(--hue) 100% 88% / 0.5), hsl(var(--hue) 100% 70% / 0) 78%);
-  clip-path: polygon(47% 0, 53% 0, 100% 100%, 0 100%);
-  transform-origin: 50% 0;
-  mix-blend-mode: screen;
-  animation: beam 7s ease-in-out infinite alternate;
+  inset: 71% 0 0;
+  background:
+    radial-gradient(24% 34% at var(--at) 0%, hsl(calc(var(--hue) + 25) 100% 80% / 0.55), transparent),
+    linear-gradient(90deg, transparent calc(var(--at) - 16%), hsl(calc(var(--hue) + 20) 100% 70% / 0.22) var(--at), transparent calc(var(--at) + 16%)),
+    linear-gradient(180deg, hsl(var(--hue) 50% 30%), hsl(var(--hue) 50% 14%) 40%, hsl(var(--hue) 40% 6%));
 }
-.show-beams i:nth-child(1) { left: 2%; --a: -26deg; --b: -8deg; animation-duration: 6.6s; }
-.show-beams i:nth-child(2) { left: 26%; --a: -12deg; --b: 10deg; animation-duration: 8.2s; animation-delay: -3s; }
-.show-beams i:nth-child(3) { left: 54%; --a: 12deg; --b: -10deg; animation-duration: 7.4s; animation-delay: -1.5s; }
-.show-beams i:nth-child(4) { left: 78%; --a: 8deg; --b: 28deg; animation-duration: 6.2s; animation-delay: -4s; }
-.is-club .show-beams i {
-  width: 1.2%;
-  clip-path: none;
-  background: linear-gradient(180deg, hsl(calc(var(--hue) + 40) 100% 80% / 0.85), hsl(calc(var(--hue) + 40) 100% 70% / 0) 85%);
+/* The sun's path on the water. The glitter is drawn under a sun 66% across; when
+   the shot is mirrored, so is the glitter (and this fade with it). */
+.show-glitter {
+  fill: #fff3df;
+  mask-image: radial-gradient(30% 70% at 66% 100%, #000 35%, transparent);
 }
-@keyframes beam {
-  from { rotate: var(--a); }
-  to { rotate: var(--b); }
+.show-glitter path {
+  opacity: 0.85;
+  animation: glitter 0.9s steps(1) infinite;
 }
-.show-performer {
+.show-glitter path:nth-child(2) { animation-delay: -0.3s; }
+.show-glitter path:nth-child(3) { animation-delay: -0.6s; }
+@keyframes glitter {
+  66% { opacity: 0.12; }
+}
+.show-palms {
   position: absolute;
-  bottom: 0;
-  width: 54%;
-  transform-origin: 50% 100%;
-  animation: performer-sway 1.9s ease-in-out infinite alternate;
+  inset: 0;
+  fill: #0b0507;
 }
-.show-performer svg {
-  display: block;
-  width: 100%;
-  height: auto;
-  overflow: visible;
-  fill: #060508;
-  filter: drop-shadow(0 0 0.9cqw hsl(var(--hue) 100% 78% / 0.7));
+.show-palm-fronds {
+  animation: frond-sway 4.6s ease-in-out infinite alternate;
+  will-change: transform;
 }
-@keyframes performer-sway {
-  from { rotate: -0.8deg; }
-  to { rotate: 0.9deg; }
+@keyframes frond-sway {
+  from { transform: rotate(-1.8deg); }
+  to { transform: rotate(1.6deg); }
 }
-.show-floor {
+
+/* A city at night. The camera pans: the near blocks slide further than the far
+   towers, as they would. */
+.is-city .show-video-sky {
+  background:
+    radial-gradient(90% 34% at 50% 80%, hsl(var(--hue) 80% 50% / 0.5), transparent 70%),
+    linear-gradient(180deg, #02030a 0%, hsl(calc(var(--hue) + 20) 50% 10%) 45%, hsl(var(--hue) 55% 22%) 78%, hsl(var(--hue) 40% 12%));
+}
+.show-city {
   position: absolute;
-  inset: auto 0 0 0;
-  height: 24%;
-  background: linear-gradient(0deg, rgb(3 3 5 / 0.7), transparent);
+  inset: 0;
 }
-.is-stage .show-floor,
-.is-club .show-floor {
-  background: linear-gradient(0deg, hsl(var(--hue) 60% 8% / 0.85), hsl(var(--hue) 70% 30% / 0.15) 60%, transparent);
+.show-city-far,
+.show-city-near {
+  animation: pan-far 3.4s cubic-bezier(0.3, 0.4, 0.4, 1) both;
+  will-change: transform;
+}
+.show-city-near {
+  animation-name: pan-near;
+}
+@keyframes pan-far {
+  from { transform: translateX(0.8%); }
+  to { transform: translateX(-0.8%); }
+}
+@keyframes pan-near {
+  from { transform: translateX(2.2%); }
+  to { transform: translateX(-2.2%); }
+}
+.show-city-far-blocks {
+  fill: hsl(var(--hue) 30% 13%);
+}
+.show-city-far-lit {
+  fill: hsl(40 70% 72%);
+  opacity: 0.4;
+}
+.show-city-haze {
+  position: absolute;
+  inset: 40% 0 0;
+  background: linear-gradient(180deg, transparent, hsl(var(--hue) 50% 30% / 0.28) 55%, transparent);
+}
+.show-city-blocks {
+  fill: #04050a;
+}
+.show-city-lit-0 {
+  fill: #ffd27e;
+  opacity: 0.9;
+}
+.show-city-lit-1 {
+  fill: #dce9ff;
+  opacity: 0.75;
+}
+.show-city-lit-2 {
+  fill: #b77d3e;
+  opacity: 0.7;
+}
+.show-city-beacon {
+  fill: #ff3b30;
+  animation: beacon 1.6s steps(1) infinite;
+}
+@keyframes beacon {
+  50% { opacity: 0.12; }
 }
 
 /* On-screen graphics */
@@ -692,7 +1001,7 @@
 .show-glass {
   position: absolute;
   inset: 0;
-  background: linear-gradient(115deg, rgb(255 255 255 / 0.07) 0%, rgb(255 255 255 / 0.025) 33%, transparent 33.5%);
+  background: linear-gradient(115deg, rgb(255 255 255 / 0.06) 0%, rgb(255 255 255 / 0.02) 30%, transparent 46%);
   pointer-events: none;
 }
 

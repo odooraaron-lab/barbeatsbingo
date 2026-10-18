@@ -1,6 +1,6 @@
 /**
  * Drawing data for the home page scene: the crowd's silhouettes, built from a few
- * measurements so each person looks different, the performers on the TV, and the
+ * measurements so each person looks different, the music videos on the TV, and the
  * neon sign's tube lettering.
  *
  * People are drawn from behind, in units where a head is about 16 wide. The shoulder
@@ -219,12 +219,12 @@ const mirror = ([x, y]: Pt): Pt => [-x, y];
 
 /** One person, from behind, as a single path. */
 export function personPath(spec: PersonSpec): string {
-  const shoulders = spec.shoulders ?? 17.6;
-  const neck = spec.neck ?? 6.3;
+  const shoulders = spec.shoulders ?? 19.2;
+  const neck = spec.neck ?? 6.4;
   const slope = spec.slope ?? 0;
   const tilt = spec.tilt ?? 0;
   const turn = spec.turn ?? 0;
-  const s = spec.head ?? 1.08;
+  const s = spec.head ?? 1;
   const twist = spec.twist ?? 0;
   const lean = spec.lean ?? 0;
 
@@ -261,190 +261,380 @@ export function personPath(spec: PersonSpec): string {
   return d;
 }
 
-// ── Performers on the TV ────────────────────────────────────────────────────
-// Each is a set of shapes in a 100 × 100 frame, cut off at the bottom like a
-// medium shot. They read as silhouettes against the stage lights.
+// ── The TV: shots from music videos ─────────────────────────────────────────
+// Drawn in the screen's own units, 160 × 90 (16:9). No performers: shots of a
+// microphone, a record, a mirror ball, palms at sunset and a city at night look
+// real, where a drawn person looks like a cut-out. The song's caption covers the
+// top left of the screen, so each shot keeps its subject clear of it.
 
-const P = (c: Pt, r: number, a: number): Pt => [c[0] + r * Math.cos(a), c[1] + r * Math.sin(a)];
-
-/** A tapered limb from p1 (radius r1) to p2 (radius r2) with round ends. */
-function limb(p1: Pt, r1: number, p2: Pt, r2: number): string {
-  const L = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
-  const th = Math.atan2(p2[1] - p1[1], p2[0] - p1[0]);
-  const a = Math.acos(Math.max(-1, Math.min(1, (r1 - r2) / L)));
-  const t1a = P(p1, r1, th + a);
-  const t2a = P(p2, r2, th + a);
-  const t2b = P(p2, r2, th - a);
-  const t1b = P(p1, r1, th - a);
-  const big2 = 2 * a > Math.PI ? 1 : 0;
-  const big1 = 2 * Math.PI - 2 * a > Math.PI ? 1 : 0;
-  return `M${pt(t1a)}L${pt(t2a)}A${f(r2)} ${f(r2)} 0 ${big2} 0 ${pt(t2b)}L${pt(t1b)}A${f(r1)} ${f(r1)} 0 ${big1} 0 ${pt(t1a)}Z`;
+/** A small repeatable random sequence, so the drawings come out the same every time. */
+function seeded(seed: number) {
+  let v = seed >>> 0;
+  return () => {
+    v = (Math.imul(v, 1664525) + 1013904223) >>> 0;
+    return v / 4294967296;
+  };
 }
 
-function ellipse(c: Pt, rx: number, ry: number, rot = 0): string {
-  const r = (rot * Math.PI) / 180;
-  const a: Pt = [c[0] + rx * Math.cos(r), c[1] + rx * Math.sin(r)];
-  const b: Pt = [c[0] - rx * Math.cos(r), c[1] - rx * Math.sin(r)];
-  return `M${pt(a)}A${f(rx)} ${f(ry)} ${f(rot)} 1 0 ${pt(b)}A${f(rx)} ${f(ry)} ${f(rot)} 1 0 ${pt(a)}Z`;
+/** Two decimals, for small details. */
+const g = (n: number) => (Math.round(n * 100) / 100).toString();
+const fine = ([x, y]: Pt) => `${g(x)} ${g(y)}`;
+const polygon = (pts: Pt[]) => `M${pts.map(fine).join("L")}Z`;
+const add = (a: Pt, b: Pt): Pt => [a[0] + b[0], a[1] + b[1]];
+const scale = (a: Pt, k: number): Pt => [a[0] * k, a[1] * k];
+const unit = (a: Pt): Pt => scale(a, 1 / (Math.hypot(a[0], a[1]) || 1));
+/** A direction turned by `deg` degrees, clockwise on screen. */
+function turnBy([x, y]: Pt, deg: number): Pt {
+  const r = (deg * Math.PI) / 180;
+  return [x * Math.cos(r) - y * Math.sin(r), x * Math.sin(r) + y * Math.cos(r)];
+}
+/** A box, outlined the same way round as the other shapes (so overlaps don't cut holes). */
+const box = (x: number, y: number, w: number, h: number): Pt[] => [
+  [x, y + h],
+  [x, y],
+  [x + w, y],
+  [x + w, y + h],
+];
+
+/** Point and unit tangent on a quadratic curve. */
+function quad(p0: Pt, p1: Pt, p2: Pt, t: number): { at: Pt; dir: Pt } {
+  const u = 1 - t;
+  const at: Pt = [u * u * p0[0] + 2 * u * t * p1[0] + t * t * p2[0], u * u * p0[1] + 2 * u * t * p1[1] + t * t * p2[1]];
+  return { at, dir: unit([2 * u * (p1[0] - p0[0]) + 2 * t * (p2[0] - p1[0]), 2 * u * (p1[1] - p0[1]) + 2 * t * (p2[1] - p1[1])]) };
 }
 
-/** Places a point given in a part's own frame (rotated by `rot` degrees, moved to `at`). */
-const place = (p: Pt, rot: number, at: Pt): Pt => transform(p, rot, at[0], at[1]);
-
-/** A singer in profile at a mic stand, facing left. */
-function micStandSinger(): string[] {
-  const outline =
-    // crown, back of the head, long hair down the back
-    "M51.5 7.2C55.5 7 59 9 60.2 12.6C61 15 61 17.5 60.6 19.6C60.9 23.5 62.2 27.5 63.4 31.5" +
-    "C64.4 35 64.8 39.5 64.2 43.5C63.8 46.2 62.8 48.6 61.6 50.2C61 51 60.4 50.6 60 51.4" +
-    // the back, hips and the back of the thigh
-    "C59.6 54.8 59.2 58 59.2 61.4C59.2 65 60.2 68.6 61.6 72.4C62.8 76 63.2 80 62.6 84.6" +
-    "C62 90 61.4 95 61.2 100L43.4 100C43.4 95 43.4 90 43.8 85C44.2 80 44.8 75.6 44.6 71" +
-    // belly, waist, bust, collarbone
-    "C44.4 66.6 44.8 62.4 45.6 58.6C46 55.5 45.8 52.5 44.6 50C43.6 48 42 46.6 41.4 44.4" +
-    "C40.8 42.4 41 39.6 42.2 37.4C43.4 35.2 45.2 33.2 46 31.4C46.6 30 46.6 28.8 46.5 27.6" +
-    // throat, chin, open mouth, nose, brow, forehead
-    "C46.4 26.4 46.1 25.6 45.4 25.3C44.2 24.9 42.9 24.8 42 24.1C41.3 23.6 41.1 22.8 41.4 22.5" +
-    "C41.7 22.2 41.8 21.9 41.5 21.7C41 21.5 41.4 21 41.5 20.6C41 20.4 40.3 20.2 40.2 19.7" +
-    "C40.3 19.1 41.1 18.4 41.6 17.5C42 16.7 42.4 16.2 42.7 15.7C43.2 15.1 43.4 14.1 43.5 13" +
-    "C43.7 9.6 47.2 7.4 51.5 7.2Z";
-  return [
-    outline,
-    // the forearm reaching to the stand, and the hand round it
-    limb([48.4, 47.2], 2.6, [38.8, 43.2], 1.45),
-    ellipse([36.9, 43.1], 2.15, 1.75, -12),
-    // stand and microphone
-    limb([31.4, 100], 0.55, [36.5, 29.6], 0.42),
-    limb([36.3, 29.8], 0.7, [38.8, 25], 0.95),
-    ellipse([39.25, 24.25], 1.25, 1.2),
-  ];
+/** A tapering band along a quadratic curve, `width(t)` either side; `edge` roughens the sides. */
+function band(p0: Pt, p1: Pt, p2: Pt, width: (t: number) => number, edge: (t: number) => number, steps: number) {
+  const left: Pt[] = [];
+  const right: Pt[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const { at, dir } = quad(p0, p1, p2, t);
+    const normal: Pt = [-dir[1], dir[0]];
+    const w = width(t) * edge(t);
+    left.push(add(at, scale(normal, w)));
+    right.push(add(at, scale(normal, -w)));
+  }
+  return polygon([...left, ...right.reverse()]);
 }
 
-/** A guitarist, facing out, head down over the guitar, legs apart. */
-function guitarist(): string[] {
-  const head =
-    // textured hair, the face turned down to the guitar
-    "M44.2 11.4C45.2 10.2 46.4 10.6 47.4 9.8C48.6 9 49.8 10 51 9.6C52.4 9.2 53.4 10.4 54.6 10.8" +
-    "C56.4 11.6 57.2 13.4 57.4 15.4C57.8 17.4 57.8 19.2 57.5 20.8C58.5 20.6 59 22.2 58.6 23.6" +
-    "C58.3 24.8 57.6 25.6 56.9 25.8C56.6 27.6 55.8 29 54.6 30L54.4 33L46.6 33L46.4 31.6" +
-    "C45.2 31.6 43.4 30.6 42.6 29.4C41.9 28.5 41.8 27.4 41.4 26.6C41 25.8 40.4 25.2 40.2 24.4" +
-    "C39.4 24 39 23.4 39.4 22.8C39.8 22 40.6 21.2 40.8 20C40.9 18.4 40.6 16.8 41.2 15.2" +
-    "C41.8 13.6 42.8 12.2 44.2 11.4Z";
-  const torso =
-    // sloping shoulders, a little taper to the waist, legs apart below the guitar
-    "M46.6 31C44.4 33.4 40.4 34.4 37 35.2C33.6 36 31.4 38.4 31.2 42.2C31.2 47.4 32.8 53 33.8 58.4" +
-    "C34.6 63 35 67.4 35 71.4C35 78 35.4 85 34.6 92L33.6 100L45.4 100L46.8 88.6C47.6 86.4 52.6 86.4 53.4 88.6" +
-    "L55 100L66.4 100L65.4 92C64.6 85 64.8 78 64.8 71.4C64.8 67.4 65.2 63 66 58.4C67 53 68.6 47.4 68.6 42.2" +
-    "C68.4 38.4 66.2 36 62.8 35.2C59.4 34.4 55.6 33.4 54.4 31Z";
-  // The guitar, in its own frame: body centre at 0, neck along +x.
-  const rot = -17;
-  const at: Pt = [37.5, 80.5];
-  const g = (p: Pt) => place(p, rot, at);
-  const neck = (x: number, w: number): [Pt, Pt] => [g([x, -w]), g([x, w])];
-  const [n1a, n1b] = neck(13, 1.7);
-  const [n2a, n2b] = neck(47, 1.35);
-  const [h1a, h1b] = neck(47, 2);
-  const [h2a, h2b] = neck(56, 2.6);
-  const guitar = [
-    ellipse(g([-6.8, 0]), 10.8, 12.2, rot),
-    ellipse(g([7.8, 0]), 7.8, 9.4, rot),
-    `M${pt(n1a)}L${pt(n2a)}L${pt(n2b)}L${pt(n1b)}Z`,
-    `M${pt(h1a)}L${pt(h2a)}L${pt(h2b)}L${pt(h1b)}Z`,
-  ];
-  const fret = g([42, 0]);
-  const strum = g([-2, 2]);
-  return [
-    head,
-    torso,
-    ...guitar,
-    // strumming arm: elbow out over the guitar, forearm down across it
-    limb([34.4, 39.6], 3.9, [26.6, 58.6], 2.7),
-    limb([26.6, 58.6], 2.6, [strum[0] - 1.4, strum[1] - 1], 1.8),
-    ellipse(strum, 2.5, 2.1, rot),
-    // fretting arm: out to the neck
-    limb([65.4, 39.6], 3.9, [72.2, 60.4], 2.7),
-    limb([72.2, 60.4], 2.6, [fret[0] - 2, fret[1] + 0.8], 1.8),
-    ellipse([fret[0], fret[1] - 0.2], 2.1, 2.7, rot),
-  ];
+/** A thin leaflet from `base` along `dir`, sagging as it goes. */
+function leaflet(base: Pt, dir: Pt, len: number, w: number, sag: number) {
+  const n: Pt = [-dir[1], dir[0]];
+  const along = (s: number): Pt => add(add(base, scale(dir, len * s)), [0, sag * len * s * s]);
+  const mid = along(0.5);
+  return polygon([add(base, scale(n, w)), add(mid, scale(n, w * 0.6)), along(1), add(mid, scale(n, -w * 0.6)), add(base, scale(n, -w))]);
 }
 
-/** A singer reaching out to the crowd, microphone in the other hand. */
-function reachingSinger(): string[] {
-  const head =
-    // head back and turned right, singing; hair falls to the left shoulder
-    "M48.2 16.6C52.6 16.2 55.8 18.6 56.4 22.2C56.6 23.4 56.4 24.2 56.9 25.2C57.4 26 58.4 27.2 58.4 27.9" +
-    "C58.4 28.5 57.6 28.6 57.3 28.9C57.6 29.4 57.5 29.7 57.2 30C57.6 30.5 57.4 31 57.1 31.2" +
-    "C57.4 32 57.2 32.9 56.4 33.3C55 34 53.4 34.4 52.4 35.4C52 37.2 52.4 39 53.8 40.4L44 41" +
-    "C41.4 41.8 39.6 41 39 38.8C38.2 36 38.8 33 38.8 30C38.8 26.4 39.4 22.8 41.6 20C43.4 17.8 45.6 16.8 48.2 16.6Z";
-  const torso =
-    "M44.6 39.6C42.4 42.2 38.6 43.4 35.6 44.4C32.8 45.2 31.2 47.4 31 50.6C30.8 55.6 32.6 61 33.8 66" +
-    "C34.6 70 35.4 73.6 35.2 77.6C35 84 34 92 33.6 100L66 100C65.6 92 64.6 84 64.4 77.6" +
-    "C64.2 73.6 65 70 65.8 66C67 61 68.8 55.6 68.6 50.6C68.4 47.4 66.8 45.2 64 44.4" +
-    "C61 43.4 57.2 42.2 55 39.6Z";
-  return [
-    torso,
-    head,
-    // raised arm, open hand
-    limb([64.6, 47.6], 3.7, [74.6, 30.2], 2.7),
-    limb([74.6, 30.2], 2.6, [78.6, 14.6], 1.8),
-    ellipse([79.4, 11.4], 2.5, 3.1, 14),
-    limb([79.4, 10.2], 0.8, [78.6, 4.6], 0.65),
-    limb([80.6, 10.4], 0.8, [80.8, 4.2], 0.65),
-    limb([81.6, 11], 0.75, [82.6, 5.6], 0.6),
-    limb([82.2, 12.2], 0.7, [84.2, 8.2], 0.55),
-    limb([77.4, 12.6], 0.85, [75.2, 9.4], 0.65),
-    // the microphone arm: elbow out, hand up at the mouth
-    limb([35.4, 47.4], 3.7, [29.8, 63], 2.7),
-    limb([29.8, 63], 2.6, [53.6, 39.6], 1.9),
-    ellipse([55.4, 37.6], 2.3, 2, -40),
-    limb([55.8, 37], 0.95, [58.6, 32.6], 1.1),
-    ellipse([59.3, 31.7], 1.35, 1.3),
-  ];
+/**
+ * One palm frond in silhouette: a stalk that sets off from the crown at `angle`
+ * (degrees clockwise from pointing right), arches over and bows under its own
+ * weight, with thin leaflets hanging from both sides.
+ */
+function frond(crown: Pt, angle: number, length: number, rnd: () => number) {
+  const dir = turnBy([1, 0], angle);
+  const out = Math.abs(dir[0]); // 1 reaching sideways, 0 pointing straight up or down
+  const up = Math.max(0, -dir[1]);
+  const lean = dir[0] < 0 ? -1 : 1;
+  const p1 = add(crown, scale(dir, length * 0.5));
+  const p2 = add(add(crown, scale(dir, length * 0.86)), [lean * up * length * 0.24, length * (0.08 + 0.44 * out)]);
+  let d = band(crown, p1, p2, (t) => length * 0.014 * (1 - 0.8 * t), () => 1, 14);
+  const count = Math.round(length * 0.9);
+  for (let i = 0; i < count; i++) {
+    const t = 0.05 + (0.93 * (i + rnd() * 0.6)) / count;
+    const { at, dir: along } = quad(crown, p1, p2, t);
+    // The near row of leaflets hangs from the stalk's lower side; the far row,
+    // pointing away, looks shorter and rises a little before it droops.
+    let down: Pt = [-along[1], along[0]];
+    if (down[1] < 0) down = scale(down, -1);
+    const reach = length * 0.3 * Math.pow(Math.sin(Math.PI * Math.min(1, 0.12 + t)), 0.8);
+    for (const row of [1, -1]) {
+      if (rnd() < 0.06) continue; // torn off
+      const near = row > 0;
+      const spread = ((44 + rnd() * 20) * Math.PI) / 180;
+      const way = unit(add(add(scale(along, Math.cos(spread)), scale(down, row * Math.sin(spread))), [0, near ? 0.3 + 0.3 * out : 0.18]));
+      const len = reach * (0.82 + rnd() * 0.3) * (near ? 1 : 0.62 + 0.25 * (1 - out));
+      d += leaflet(at, way, len, length * 0.0085, near ? 0.28 : 0.2);
+    }
+  }
+  return d;
 }
 
-/** A DJ at the decks, one hand in the air. */
-function dj(): string[] {
-  const head =
-    // head nodding down to the decks, headphones on
-    "M44.2 26.6C48.8 26.2 52.2 29 52.6 33.4C52.9 36.6 52 39.4 50.4 41.2L50.2 44.2L39 44.2L38.8 41.4" +
-    "C36.8 39.4 35.8 36.6 36 33.4C36.4 29.2 39.6 26.8 44.2 26.6Z";
-  const phones = [
-    // the band over the head and a cup on each ear
-    "M35.2 34.2C35 28.2 38.8 24.6 44.4 24.4C50 24.6 53.6 28.2 53.4 34.2L52.2 34.2C52.2 29.4 49 26.2 44.4 26C39.8 26.2 36.4 29.4 36.4 34.2Z",
-    ellipse([35.6, 36], 2.2, 3.2, 6),
-    ellipse([53, 36], 2.2, 3.2, -6),
-  ];
-  const torso =
-    "M39.4 43C36.6 45.6 32.4 46.6 29.2 47.6C26.4 48.6 24.8 51 24.8 54.4C24.8 59.6 26.4 65 27.4 70L27.4 80" +
-    "L61.4 80L61.4 70C62.4 65 64 59.6 64 54.4C64 51 62.4 48.6 59.6 47.6C56.4 46.6 52.2 45.6 49.4 43Z";
-  const booth = [
-    // the decks, a laptop and the front of the booth
-    "M6 76.4L94 76.4L94 100L6 100Z",
-    "M18 73.4L72 73.4L73.4 76.6L16.6 76.6Z",
-    "M60.8 59.8L74.6 61.2L73.6 74.2L59.4 73.2Z",
-  ];
-  return [
-    head,
-    ...phones,
-    torso,
-    // a fist in the air
-    limb([59.4, 50.6], 3.7, [70.2, 37], 2.7),
-    limb([70.2, 37], 2.6, [72.4, 21.6], 1.9),
-    ellipse([72.6, 18.8], 2.6, 3, 8),
-    // the other hand down on the decks
-    limb([29.4, 50.6], 3.7, [24.6, 64.6], 2.7),
-    limb([24.6, 64.6], 2.6, [33.4, 72.2], 1.9),
-    ...booth,
-  ];
+/** A palm tree in silhouette: a curving trunk, and a crown of feathery fronds. */
+export function palmTree(base: Pt, crown: Pt, size: number, seed: number) {
+  const rnd = seeded(seed);
+  const bend: Pt = [(base[0] + crown[0]) / 2 - size * 0.13, (base[1] + crown[1]) / 2 + size * 0.03];
+  // The trunk tapers up from a flared foot, its rings just showing on the edges.
+  const trunk = band(
+    base,
+    bend,
+    crown,
+    (t) => size * (0.016 + 0.012 * (1 - t) + 0.018 * Math.pow(1 - t, 10)),
+    (t) => 1 + 0.05 * Math.sin(t * 80),
+    60,
+  );
+  // The knot at the top of the trunk, and the coconuts under it.
+  let knot = oval([crown[0], crown[1] + size * 0.008], size * 0.024, size * 0.028);
+  for (const [dx, dy] of [
+    [-0.017, 0.024],
+    [0.013, 0.027],
+    [-0.002, 0.038],
+    [0.024, 0.014],
+  ]) {
+    knot += oval([crown[0] + dx * size, crown[1] + dy * size], size * 0.014, size * 0.015);
+  }
+  // Fronds all round the crown: seen side on they reach every way, some
+  // foreshortened. The last two are old ones, hanging down.
+  let fronds = "";
+  const angles = [-198, -174, -150, -126, -102, -80, -56, -32, -10, 12, 106, 74];
+  for (const [i, a] of angles.entries()) {
+    const old = i >= angles.length - 2;
+    const length = size * (old ? 0.26 : 0.38 + rnd() * 0.16) * (0.72 + rnd() * 0.28);
+    fronds += frond(crown, a + (rnd() - 0.5) * 14, length, rnd);
+  }
+  return { trunk, knot, fronds };
 }
 
-export type Pose = "mic" | "guitar" | "reach" | "dj";
-export const PERFORMERS: Record<Pose, string[]> = {
-  mic: micStandSinger(),
-  guitar: guitarist(),
-  reach: reachingSinger(),
-  dj: dj(),
+/**
+ * The sun's path across the sea: short flashes of light round a line under the
+ * sun, more of them and wider nearer the viewer. Each set is a different scatter;
+ * they take turns, so the water shimmers.
+ */
+export function sunGlitter(cx: number, horizon: number, seed: number, sets = 3) {
+  const rnd = seeded(seed);
+  return Array.from({ length: sets }, () => {
+    let d = "";
+    for (let i = 0; i < 64; i++) {
+      const depth = Math.pow(rnd(), 1.35); // 0 at the horizon, 1 at the bottom of the screen
+      const y = horizon + 0.35 + depth * (90 - horizon);
+      const spread = 2.2 + depth * 12;
+      const x = cx + (spread * (rnd() + rnd() + rnd() - 1.5)) / 1.5;
+      const w = (0.5 + rnd() * 1.5) * (0.6 + depth * 2.4);
+      const h = 0.12 + depth * 0.32;
+      d += polygon([
+        [x - w / 2, y],
+        [x, y - h / 2],
+        [x + w / 2, y],
+        [x, y + h / 2],
+      ]);
+    }
+    return d;
+  });
+}
+
+/** A block's outline: setbacks and a mast on the tall ones, a water tank on some roofs. */
+function block(x: number, w: number, top: number, bottom: number, tall: boolean, rnd: () => number) {
+  const parts: Pt[][] = [box(x, top, w, bottom - top)];
+  let roof = top;
+  let left = x;
+  let right = x + w;
+  if (tall) {
+    for (let s = rnd() < 0.5 ? 1 : 2; s > 0; s--) {
+      const inset = (right - left) * (0.12 + rnd() * 0.12);
+      const rise = 2 + rnd() * 4;
+      parts.push(box(left + inset, roof - rise, right - left - inset * 2, rise + 0.3));
+      left += inset;
+      right -= inset;
+      roof -= rise;
+    }
+  }
+  let mast: Pt | null = null;
+  if (tall && rnd() < 0.7) {
+    const mx = (left + right) / 2;
+    const height = 4 + rnd() * 5;
+    parts.push(box(mx - 0.2, roof - height, 0.4, height + 0.3));
+    mast = [mx, roof - height];
+  } else if (!tall && w > 6 && rnd() < 0.35) {
+    // a water tank on legs
+    const tx = x + 1.2 + rnd() * (w - 4.4);
+    parts.push(box(tx + 0.3, top - 1.4, 0.3, 1.7));
+    parts.push(box(tx + 2, top - 1.4, 0.3, 1.7));
+    parts.push(box(tx, top - 3.8, 2.6, 2.5));
+    parts.push([
+      [tx - 0.2, top - 3.7],
+      [tx + 1.3, top - 5],
+      [tx + 2.8, top - 3.7],
+    ]);
+  }
+  return { outline: parts.map(polygon).join(""), mast };
+}
+
+/**
+ * A city at night in two layers: towers far off in the haze, and nearer blocks
+ * with lit windows (warm, cool and dim), water tanks on the roofs and red lights
+ * on the masts. Drawn wider than the screen, so the camera can pan across it.
+ */
+export function skyline(seed: number) {
+  const rnd = seeded(seed);
+  let far = "";
+  let farLit = "";
+  let near = "";
+  const lit = ["", "", ""];
+  const masts: Pt[] = [];
+  for (let x = -12; x < 172; ) {
+    const w = 3.5 + rnd() * 8;
+    const height = 8 + rnd() * rnd() * 36;
+    const top = 66 - height;
+    far += block(x, w, top, 72, height > 26, rnd).outline;
+    for (let wy = top + 1.2; wy < 70; wy += 1.5) {
+      for (let wx = x + 0.8; wx < x + w - 1; wx += 1.2) {
+        if (rnd() < 0.16) farLit += polygon(box(wx, wy, 0.42, 0.55));
+      }
+    }
+    x += w + rnd() * 2;
+  }
+  for (let x = -12; x < 172; ) {
+    const w = 6 + rnd() * 11;
+    const height = 6 + rnd() * rnd() * 30 + (rnd() < 0.12 ? 14 : 0);
+    const top = 76 - height;
+    const b = block(x, w, top, 92, height > 24, rnd);
+    near += b.outline;
+    if (b.mast) masts.push(b.mast);
+    const chance = 0.1 + rnd() * 0.42;
+    for (let wy = top + 1.6; wy < 90; wy += 2.05) {
+      const floor = rnd() < 0.08 ? 0.85 : chance; // now and then a whole floor still at work
+      for (let wx = x + 1; wx < x + w - 1.3; wx += 1.55) {
+        if (rnd() < floor) {
+          const c = rnd();
+          lit[c < 0.62 ? 0 : c < 0.84 ? 1 : 2] += polygon(box(wx, wy, 0.72, 1.05));
+        }
+      }
+    }
+    x += w + (rnd() < 0.3 ? rnd() * 2.5 : -0.5);
+  }
+  return { far, farLit, near, lit, masts };
+}
+
+type V3 = [number, number, number];
+const dot3 = (a: V3, b: V3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const unit3 = (a: V3): V3 => {
+  const l = Math.hypot(a[0], a[1], a[2]);
+  return [a[0] / l, a[1] / l, a[2] / l];
 };
+
+/**
+ * A mirror ball, facet by facet, in rows round it like the real thing. Each facet
+ * shows a bit of the room: most catch the dark, some the coloured lights, and the
+ * ones angled between the spotlight (upper left) and the camera flash white.
+ * Returns the facets by shade, darkest first; two sets of facets that take turns
+ * to catch the light as it turns; and the brightest points, where it glints.
+ */
+export function mirrorBall(cx: number, cy: number, r: number, seed: number) {
+  const rnd = seeded(seed);
+  const deg = Math.PI / 180;
+  const light = unit3([-0.5, 0.62, 0.6]);
+  const half = unit3([light[0], light[1], light[2] + 1]);
+  const at = (lat: number, lon: number): Pt => [cx + r * Math.cos(lat * deg) * Math.sin(lon * deg), cy - r * Math.sin(lat * deg)];
+  const shades = ["", "", "", "", "", ""];
+  const flash = ["", ""];
+  const bright: { p: Pt; spec: number }[] = [];
+  const rows = 18;
+  for (let row = 0; row < rows; row++) {
+    const lat0 = -90 + (180 * row) / rows;
+    const lat1 = lat0 + 180 / rows;
+    const lat = (lat0 + lat1) / 2;
+    // Fewer facets round the rows nearer the top and bottom, as on a real ball.
+    const count = Math.max(6, Math.round(38 * Math.cos(lat * deg)));
+    const step = 360 / count;
+    const offset = rnd() * step;
+    const gap = Math.min(step * 0.25, 0.9 / Math.cos(lat * deg));
+    for (let k = 0; k < count; k++) {
+      const a = -180 + offset + k * step;
+      const lon0 = Math.max(-90, a + gap);
+      const lon1 = Math.min(90, a + step - gap);
+      if (lon1 <= lon0) continue; // round the back
+      const lon = (lon0 + lon1) / 2;
+      const n: V3 = [Math.cos(lat * deg) * Math.sin(lon * deg), Math.sin(lat * deg), Math.cos(lat * deg) * Math.cos(lon * deg)];
+      const spec = Math.pow(Math.max(0, dot3(n, half)), 26);
+      const facing = Math.max(0, dot3(n, light));
+      const v = rnd();
+      const shade = spec > 0.5 ? 5 : spec > 0.16 ? 4 : v < 0.12 ? 3 : v < 0.2 + 0.3 * facing ? 2 : v < 0.72 ? 1 : 0;
+      const facet = polygon([at(lat0 + 0.9, lon0), at(lat0 + 0.9, lon1), at(lat1 - 0.9, lon1), at(lat1 - 0.9, lon0)]);
+      shades[shade] += facet;
+      if (shade < 4 && rnd() < 0.08) flash[k % 2] += facet;
+      if (shade >= 4) bright.push({ p: at(lat, lon), spec });
+    }
+  }
+  bright.sort((a, b) => b.spec - a.spec);
+  const glints = [bright[0], bright[Math.floor(bright.length / 2)], bright[bright.length - 1]]
+    .filter(Boolean)
+    .map(({ p }) => p);
+  return { shades, flash, glints };
+}
+
+/** Spots of light thrown round the room by the mirror ball, scattered over the 160 × 90 screen. */
+export function discoSpots(seed: number, count: number) {
+  const rnd = seeded(seed);
+  const cols = Math.round(Math.sqrt((count * 160) / 90));
+  const rows = Math.ceil(count / cols);
+  const spots: { x: number; y: number; rx: number; ry: number; o: number }[] = [];
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      const x = ((j + 0.1 + rnd() * 0.8) * 160) / cols;
+      const y = ((i + 0.1 + rnd() * 0.8) * 90) / rows;
+      const size = 0.45 + rnd() * rnd() * 1.1;
+      // Spots off to the sides land on the walls at a slant, so they stretch.
+      const stretch = 1 + (Math.abs(x - 80) / 80) * 0.7;
+      spots.push({
+        x: +g(x),
+        y: +g(y),
+        rx: +g(size * stretch * (1 + rnd() * 0.25)),
+        ry: +g(size),
+        o: +g(0.35 + rnd() * 0.65),
+      });
+    }
+  }
+  return spots;
+}
+
+/** A stage microphone on its stand, seen from the front. */
+export const MIC = {
+  stand:
+    // pole, the clip, and the base's legs (just in shot)
+    "M79.3 90L79.3 41.5Q79.3 40.4 80 40.4Q80.7 40.4 80.7 41.5L80.7 90Z" +
+    "M78.2 41.6L81.8 41.6L81.4 38.6L78.6 38.6Z",
+  body:
+    // the handle, tapering into the clip
+    "M78.7 38.8L77.6 30.6Q77.5 29.6 78.6 29.4L81.6 29.2Q82.6 29.3 82.5 30.3L81.3 38.8Z" +
+    // the ring under the grille
+    "M77.1 30.1L82.9 29.6L82.8 28L77 28.5Z",
+  grille: "M80 13.6A7.5 7.6 -6 1 1 79.9 13.6Z",
+};
+
+/**
+ * A record player's arm, seen from above at an angle like the record: the pivot
+ * just off the record at the right (clear of the channel logo), the arm reaching
+ * onto the record, the headshell turned in toward the spindle, and the counter-
+ * weight behind the pivot. `across` runs from one edge of the arm to the other,
+ * for shading it like a metal tube.
+ */
+export const TONEARM = (() => {
+  const pivot: Pt = [151, 27.6];
+  const joint: Pt = [117, 47.6];
+  const u = unit([joint[0] - pivot[0], joint[1] - pivot[1]]);
+  const n: Pt = [-u[1], u[0]];
+  const bar = (from: Pt, to: Pt, w0: number, w1 = w0) =>
+    polygon([add(from, scale(n, w0)), add(to, scale(n, w1)), add(to, scale(n, -w1)), add(from, scale(n, -w0))]);
+  const across = (w: number) => {
+    const [a, b] = [add(pivot, scale(n, w)), add(pivot, scale(n, -w))];
+    return { x1: +g(a[0]), y1: +g(a[1]), x2: +g(b[0]), y2: +g(b[1]) };
+  };
+  const h = turnBy(u, 22);
+  const hn: Pt = [-h[1], h[0]];
+  const on = (k: number, side = 0, drop = 0): Pt => add(add(add(joint, scale(h, k)), scale(hn, side)), [0, drop]);
+  return {
+    across: across(0.85),
+    acrossWeight: across(2.1),
+    plate: oval([151, 31.2], 7.2, 4.4),
+    post: "M148 31.2L148 27.6A3 1.85 0 0 1 154 27.6L154 31.2A3 1.85 0 0 1 148 31.2Z",
+    cap: oval(pivot, 3, 1.85),
+    weight: bar(add(pivot, scale(u, -4.2)), add(pivot, scale(u, -9.6)), 2.1),
+    arm: bar(add(pivot, scale(u, -3.6)), joint, 0.85, 0.72),
+    cartridge: polygon([on(2.8, 1.05, 0.7), on(6.8, 1.05, 0.7), on(6.8, -1.05, 1.8), on(2.8, -1.05, 1.8)]),
+    head: polygon([on(0, 1.1), on(7.4, 1.65), on(7.4, -1.65), on(0, -1.1)]),
+    lift: polygon([on(5.4, 1.5), on(6.5, 4.1), on(7.1, 4), on(6.1, 1.5)]),
+  };
+})();
 
 /** "bar beats bingo" in neon tube lettering (Tilt Neon, SIL Open Font License), 759.2 × 91.5. */
 export const NEON_SIGN = {
@@ -472,8 +662,8 @@ export type CrowdMember = {
   period: number;
 };
 
-const her = { shoulders: 15.2, neck: 5.3, slope: 1.8 } as const;
-const him = { shoulders: 17.6, neck: 6.3 } as const;
+const her = { shoulders: 16.6, neck: 5.4, slope: 1.8 } as const;
+const him = { shoulders: 19.2, neck: 6.4 } as const;
 
 export const CROWD: CrowdMember[] = [
   // standing by the TV, in twos and threes, some further back than others

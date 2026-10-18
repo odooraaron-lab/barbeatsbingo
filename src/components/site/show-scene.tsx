@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { memo, useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
-import { CROWD, NEON_SIGN, PERFORMERS, personPath, type Pose } from "./show-art";
+import { CROWD, MIC, NEON_SIGN, TONEARM, discoSpots, mirrorBall, palmTree, personPath, skyline, sunGlitter } from "./show-art";
 
 /**
  * The home page's opening scene: a Bar Beats Bingo night in a bar. Music videos
@@ -43,7 +43,8 @@ const CELLS: (string | null)[] = [
 ];
 const WIN_ROW = 2;
 
-type Look = "stage" | "sunset" | "city" | "club";
+/** The shot on the TV: each song's video gets one, in its own colour. */
+type Look = "mic" | "vinyl" | "disco" | "palms" | "city";
 type Call = {
   /** The square this song is on, or null if it isn't on your card. */
   cell: number | null;
@@ -51,26 +52,44 @@ type Call = {
   artist: string;
   /** The video's main colour, which also lights the room. */
   hue: number;
-  pose: Pose;
   look: Look;
-  /** Where the performer stands, in % across the screen. */
-  at: number;
+  /** Mirror the shot (palms and city), so a look seen twice isn't the same picture. */
   flip?: boolean;
 };
 
 // The songs the show plays, in order. Letters go B, I, N, G, O in turn (as on the
 // call list), and a song on the card sits in its letter's column. Song 9 makes the line.
 const CALLS: Call[] = [
-  { cell: 10, title: "Good As Hell", artist: "Lizzo", hue: 330, pose: "reach", look: "stage", at: 50 },
-  { cell: 1, title: "Heat Waves", artist: "Glass Animals", hue: 22, pose: "guitar", look: "sunset", at: 42 },
-  { cell: null, title: "Shut Up and Dance", artist: "Walk the Moon", hue: 192, pose: "mic", look: "club", at: 58, flip: true },
-  { cell: 18, title: "Easy On Me", artist: "Adele", hue: 222, pose: "mic", look: "city", at: 44 },
-  { cell: 14, title: "Kiss My (Uh Oh)", artist: "Anne-Marie & Little Mix", hue: 300, pose: "reach", look: "club", at: 46, flip: true },
-  { cell: 20, title: "Watermelon Sugar", artist: "Harry Styles", hue: 350, pose: "guitar", look: "stage", at: 56, flip: true },
-  { cell: 11, title: "Señorita", artist: "Shawn Mendes & Camila Cabello", hue: 32, pose: "mic", look: "sunset", at: 52 },
-  { cell: null, title: "Mr. Brightside", artist: "The Killers", hue: 262, pose: "guitar", look: "stage", at: 46 },
-  { cell: 13, title: "X", artist: "Jonas Brothers & Karol G", hue: 168, pose: "dj", look: "club", at: 50 },
+  { cell: 10, title: "Good As Hell", artist: "Lizzo", hue: 330, look: "disco" },
+  { cell: 1, title: "Heat Waves", artist: "Glass Animals", hue: 22, look: "palms" },
+  { cell: null, title: "Shut Up and Dance", artist: "Walk the Moon", hue: 192, look: "city" },
+  { cell: 18, title: "Easy On Me", artist: "Adele", hue: 222, look: "mic" },
+  { cell: 14, title: "Kiss My (Uh Oh)", artist: "Anne-Marie & Little Mix", hue: 300, look: "vinyl" },
+  { cell: 20, title: "Watermelon Sugar", artist: "Harry Styles", hue: 350, look: "palms", flip: true },
+  { cell: 11, title: "Señorita", artist: "Shawn Mendes & Camila Cabello", hue: 32, look: "mic" },
+  { cell: null, title: "Mr. Brightside", artist: "The Killers", hue: 262, look: "city", flip: true },
+  { cell: 13, title: "X", artist: "Jonas Brothers & Karol G", hue: 168, look: "disco" },
 ];
+
+// The TV's drawings. Working them out takes a moment, so it's done while the title
+// screen shows (or the first time a shot needs one), not while the page loads.
+function once<T>(make: () => T): () => T {
+  let value: T | undefined;
+  return () => (value ??= make());
+}
+const palms = once(() => [
+  { at: [45, 30] as const, tree: palmTree([33, 97], [45, 30], 64, 7) },
+  { at: [19, 50] as const, tree: palmTree([12, 99], [19, 50], 46, 21) },
+]);
+/** The sun sits 66% across (34% when the shot is mirrored); the sea starts 71% down. */
+const glitter = once(() => sunGlitter(160 * 0.66, 90 * 0.71, 11));
+const city = once(() => skyline(5));
+const BALL = { cx: 80, cy: 47, r: 17 };
+const ball = once(() => mirrorBall(BALL.cx, BALL.cy, BALL.r, 3));
+const spots = once(() => [discoSpots(17, 46), discoSpots(29, 70)]);
+const drawTv = () => [palms, glitter, city, ball, spots].forEach((draw) => draw());
+/** The microphone stands right of centre, clear of the caption. */
+const MIC_AT = { dx: 31, dy: 10 };
 
 type State = {
   round: number;
@@ -192,33 +211,266 @@ const NeonSign = memo(function NeonSign() {
   );
 });
 
-function Video({ call }: { call: Call }) {
+/** A microphone on its stand, alone in a spotlight, dust drifting through the beam. */
+function MicShot() {
+  const id = useId();
   return (
-    <div className={`show-video is-${call.look}`} style={{ "--at": `${call.at}%` } as CSSProperties}>
+    <>
+      <span className="show-mic-beam" />
+      <span className="show-mic-pool" />
+      <svg viewBox="0 0 160 90" className="show-shot" aria-hidden>
+        <defs>
+          <linearGradient id={`${id}-metal`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#0b0b0e" />
+            <stop offset="0.42" className="show-mic-shine" />
+            <stop offset="0.6" stopColor="#3a3a42" />
+            <stop offset="1" stopColor="#09090b" />
+          </linearGradient>
+          <pattern id={`${id}-mesh`} width="0.95" height="0.95" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <rect width="0.95" height="0.95" fill="#0f0f13" />
+            <rect width="0.5" height="0.5" fill="#45454f" />
+          </pattern>
+          {/* Lit from straight above: bright on top, falling away underneath */}
+          <radialGradient id={`${id}-light`} cx="0.5" cy="0.04" r="0.95">
+            <stop offset="0" className="show-mic-shine" stopOpacity="0.92" />
+            <stop offset="0.42" className="show-mic-shine" stopOpacity="0.16" />
+            <stop offset="1" stopColor="#000" stopOpacity="0.72" />
+          </radialGradient>
+        </defs>
+        <g transform={`translate(${MIC_AT.dx} ${MIC_AT.dy})`}>
+          <path d={MIC.stand} fill={`url(#${id}-metal)`} />
+          <path d={MIC.body} fill={`url(#${id}-metal)`} />
+          <path d={MIC.grille} fill={`url(#${id}-mesh)`} />
+          <path d={MIC.grille} fill={`url(#${id}-light)`} />
+        </g>
+      </svg>
+      <span className="show-dust">
+        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
+          <i key={i} />
+        ))}
+      </span>
+    </>
+  );
+}
+
+/** A record spinning under the lights, the player's arm resting on it. */
+function VinylShot() {
+  const id = useId();
+  const arm = TONEARM;
+  return (
+    <>
+      <span className="show-vinyl">
+        <span className="show-vinyl-disc">
+          {/* The label turns with the record (the grooves alone wouldn't show it turning) */}
+          <svg viewBox="-50 -50 100 100" className="show-vinyl-label" aria-hidden>
+            <defs>
+              <path id={`${id}-arc`} d="M-34 0A34 34 0 0 1 34 0" />
+            </defs>
+            <circle r="50" className="show-label-paper" />
+            <circle r="45.5" className="show-label-ring" />
+            <text className="show-label-text">
+              <textPath href={`#${id}-arc`} startOffset="50%" textAnchor="middle">
+                BAR BEATS BINGO
+              </textPath>
+            </text>
+            <text y="22" textAnchor="middle" className="show-label-small">
+              SIDE A
+            </text>
+            <text y="31" textAnchor="middle" className="show-label-small">
+              33⅓ RPM
+            </text>
+            <circle r="4.4" className="show-label-spindle" />
+            <circle r="1.8" fill="#09090b" />
+          </svg>
+        </span>
+        <span className="show-vinyl-sheen" />
+      </span>
+      <svg viewBox="0 0 160 90" className="show-shot show-tonearm" aria-hidden>
+        <defs>
+          <linearGradient id={`${id}-tube`} gradientUnits="userSpaceOnUse" {...arm.across}>
+            <stop offset="0" stopColor="#5b5f6a" />
+            <stop offset="0.38" stopColor="#eef0f4" />
+            <stop offset="0.7" stopColor="#9da1ac" />
+            <stop offset="1" stopColor="#3a3d46" />
+          </linearGradient>
+          <linearGradient id={`${id}-weight`} gradientUnits="userSpaceOnUse" {...arm.acrossWeight}>
+            <stop offset="0" stopColor="#2a2c33" />
+            <stop offset="0.35" stopColor="#8b8f9a" />
+            <stop offset="0.65" stopColor="#4a4d56" />
+            <stop offset="1" stopColor="#15161a" />
+          </linearGradient>
+          <linearGradient id={`${id}-post`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#3b3e47" />
+            <stop offset="0.4" stopColor="#c9ccd4" />
+            <stop offset="1" stopColor="#2a2c33" />
+          </linearGradient>
+        </defs>
+        <path d={arm.plate} className="show-tonearm-plate" />
+        <path d={arm.post} fill={`url(#${id}-post)`} />
+        <path d={arm.cap} className="show-tonearm-cap" />
+        <path d={arm.weight} fill={`url(#${id}-weight)`} />
+        <path d={arm.arm} fill={`url(#${id}-tube)`} />
+        <path d={arm.cartridge} className="show-tonearm-cartridge" />
+        <path d={arm.head} className="show-tonearm-head" />
+        <path d={arm.lift} fill={`url(#${id}-tube)`} />
+      </svg>
+    </>
+  );
+}
+
+/** A mirror ball in a spotlight, throwing spots of light round the room as it turns. */
+function DiscoShot() {
+  const id = useId();
+  const { cx, cy, r } = BALL;
+  const art = ball();
+  return (
+    <>
+      <span className="show-disco-spots">
+        {/* Each layer is the same scatter twice over, so it can slide round forever */}
+        {spots().map((layerSpots, layer) => (
+          <svg
+            key={layer}
+            viewBox="0 0 320 90"
+            preserveAspectRatio="none"
+            className={`show-disco-layer show-disco-layer-${layer}`}
+            aria-hidden
+          >
+            <defs>
+              <radialGradient id={`${id}-spot${layer}`}>
+                <stop offset="0" stopColor="#fff" />
+                <stop offset="0.32" stopColor="#fff" stopOpacity="0.95" />
+                <stop offset="0.46" className="show-disco-tint" stopOpacity="0.4" />
+                <stop offset="1" className="show-disco-tint" stopOpacity="0" />
+              </radialGradient>
+            </defs>
+            {[0, 160].map((dx) =>
+              layerSpots.map((s, i) => (
+                <ellipse
+                  key={`${dx}-${i}`}
+                  cx={s.x + dx}
+                  cy={s.y}
+                  rx={s.rx * 2}
+                  ry={s.ry * 2}
+                  opacity={s.o}
+                  fill={`url(#${id}-spot${layer})`}
+                />
+              )),
+            )}
+          </svg>
+        ))}
+      </span>
+      <span className="show-disco-rays" />
+      <span className="show-disco-pin" />
+      <svg viewBox="0 0 160 90" className="show-shot" aria-hidden>
+        <defs>
+          <radialGradient id={`${id}-shade`} cx="0.36" cy="0.32" r="0.75">
+            <stop offset="0.35" stopColor="#000" stopOpacity="0" />
+            <stop offset="1" stopColor="#000" stopOpacity="0.55" />
+          </radialGradient>
+        </defs>
+        <path d={`M${cx} 0L${cx} ${cy - r}`} className="show-disco-cord" />
+        <circle cx={cx} cy={cy} r={r + 0.2} className="show-disco-base" />
+        {art.shades.map((d, i) => (
+          <path key={i} d={d} className={`show-disco-shade-${i}`} />
+        ))}
+        {art.flash.map((d, i) => (
+          <path key={`flash-${i}`} d={d} className={`show-disco-flash show-disco-flash-${i}`} />
+        ))}
+        <circle cx={cx} cy={cy} r={r} fill={`url(#${id}-shade)`} />
+      </svg>
+      {art.glints.map(([x, y], i) => (
+        <span
+          key={i}
+          className="show-disco-glint"
+          style={{ left: `${(x / 160) * 100}%`, top: `${(y / 90) * 100}%`, animationDelay: `${i * 0.8}s` }}
+        />
+      ))}
+    </>
+  );
+}
+
+/** Palms against a low sun, the light glittering on the sea, the fronds moving in the breeze. */
+function PalmsShot({ flip }: { flip?: boolean }) {
+  const mirror = flip ? { scale: "-1 1" } : undefined;
+  const trees = palms();
+  return (
+    <>
       <span className="show-video-sky" />
-      {call.look === "sunset" && <span className="show-sun" />}
-      {(call.look === "city" || call.look === "club") && (
-        <span className="show-bokeh">
-          {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-            <i key={i} />
+      <span className="show-sun" />
+      <span className="show-clouds" />
+      <span className="show-sea" />
+      <svg viewBox="0 0 160 90" className="show-shot show-glitter" style={mirror} aria-hidden>
+        {glitter().map((d, i) => (
+          <path key={i} d={d} />
+        ))}
+      </svg>
+      <span className="show-palms" style={mirror}>
+        <svg viewBox="0 0 160 90" className="show-shot" aria-hidden>
+          {trees.map(({ tree }, i) => (
+            <g key={i}>
+              <path d={tree.trunk} />
+              <path d={tree.knot} />
+            </g>
           ))}
-        </span>
-      )}
-      {(call.look === "stage" || call.look === "club") && (
-        <span className="show-beams">
-          {[0, 1, 2, 3].map((i) => (
-            <i key={i} />
+        </svg>
+        {trees.map(({ at, tree }, i) => (
+          <svg
+            key={i}
+            viewBox="0 0 160 90"
+            className="show-shot show-palm-fronds"
+            style={{
+              transformOrigin: `${(at[0] / 160) * 100}% ${(at[1] / 90) * 100}%`,
+              animationDelay: `${-i * 1.4}s`,
+              animationDuration: i ? "3.8s" : undefined,
+            }}
+            aria-hidden
+          >
+            <path d={tree.fronds} />
+          </svg>
+        ))}
+      </span>
+    </>
+  );
+}
+
+/** A city at night, the camera panning slowly: towers in the haze, lit windows, red lights on the masts. */
+function CityShot({ flip }: { flip?: boolean }) {
+  const town = city();
+  return (
+    <>
+      <span className="show-video-sky" />
+      <span className="show-city" style={flip ? { scale: "-1 1" } : undefined}>
+        <svg viewBox="0 0 160 90" className="show-shot show-city-far" aria-hidden>
+          <path d={town.far} className="show-city-far-blocks" />
+          <path d={town.farLit} className="show-city-far-lit" />
+        </svg>
+        <span className="show-city-haze" />
+        <svg viewBox="0 0 160 90" className="show-shot show-city-near" aria-hidden>
+          <path d={town.near} className="show-city-blocks" />
+          {town.lit.map((d, i) => (
+            <path key={i} d={d} className={`show-city-lit-${i}`} />
           ))}
-        </span>
-      )}
-      <span className="show-performer" style={{ left: `calc(${call.at}% - 27%)`, ...(call.flip ? { scale: "-1 1" } : null) }}>
-        <svg viewBox="0 0 100 100" aria-hidden>
-          {PERFORMERS[call.pose].map((d, i) => (
-            <path key={i} d={d} />
+        </svg>
+        <svg viewBox="0 0 160 90" className="show-shot show-city-near" aria-hidden>
+          {town.masts.map(([x, y], i) => (
+            <circle key={i} cx={x} cy={y} r={0.55} className="show-city-beacon" style={{ animationDelay: `${-i * 0.55}s` }} />
           ))}
         </svg>
       </span>
-      <span className="show-floor" />
+    </>
+  );
+}
+
+function Video({ call }: { call: Call }) {
+  // The sun sits away from the palms.
+  const at = call.look === "palms" ? (call.flip ? 34 : 66) : 50;
+  return (
+    <div className={`show-video is-${call.look}`} style={{ "--at": `${at}%` } as CSSProperties}>
+      {call.look === "mic" && <MicShot />}
+      {call.look === "vinyl" && <VinylShot />}
+      {call.look === "disco" && <DiscoShot />}
+      {call.look === "palms" && <PalmsShot flip={call.flip} />}
+      {call.look === "city" && <CityShot flip={call.flip} />}
     </div>
   );
 }
@@ -405,6 +657,16 @@ export function ShowScene({ className = "" }: { className?: string }) {
   const [state, setState] = useState<State>(() => fresh(1));
   const [onScreen, setOnScreen] = useState(true);
   const reduced = useSyncExternalStore(subscribeMotion, () => window.matchMedia(motionQuery).matches, () => false);
+
+  // Work out the TV's drawings while the title screen shows.
+  useEffect(() => {
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(drawTv, { timeout: 2000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = window.setTimeout(drawTv, 800);
+    return () => window.clearTimeout(id);
+  }, []);
 
   // Only animate while the scene is on screen (saves phone batteries).
   useEffect(() => {
