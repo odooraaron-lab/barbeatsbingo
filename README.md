@@ -151,6 +151,7 @@ After changing `src/db/schema.ts`, run `npm run db:generate` to create a migrati
 | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Uploading files directly (optional) |
 | `RESEND_API_KEY`, `EMAIL_FROM`, `CONTACT_EMAIL` | Emails (optional) |
 | `APP_URL` | Links in emails (optional) |
+| `ADMIN_RESET_PASSWORD` | Set to `yes` with `ADMIN_EMAIL` and `ADMIN_PASSWORD` to reset a lost admin login on the next deploy, then remove all three |
 
 ## How it fits together
 

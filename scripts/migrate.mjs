@@ -1,7 +1,9 @@
 // Runs before every build (see "build" in package.json):
 //   1. applies any new database migrations in ./drizzle
 //   2. adds the starter genres if the library is empty
-//   3. creates the first admin from ADMIN_EMAIL / ADMIN_PASSWORD if that user doesn't exist yet
+//   3. creates the first admin from ADMIN_EMAIL / ADMIN_PASSWORD if that user doesn't exist yet;
+//      with ADMIN_RESET_PASSWORD=yes it also sets that password on the existing account
+//      (for when the admin login is lost). Remove ADMIN_RESET_PASSWORD after logging in.
 //
 // Safe to run repeatedly. Locally it skips everything when no database is set;
 // on Vercel it stops the build, because the site can't work without one.
@@ -71,6 +73,7 @@ try {
 
   const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const adminPassword = process.env.ADMIN_PASSWORD;
+  const resetAdmin = /^(1|true|yes)$/i.test(process.env.ADMIN_RESET_PASSWORD?.trim() ?? "");
   if (adminEmail && adminPassword) {
     if (adminPassword.length < 10) {
       console.warn("[migrate] ADMIN_PASSWORD must be at least 10 characters, admin not created.");
@@ -82,9 +85,26 @@ try {
           [adminEmail, "Admin", await hashPassword(adminPassword)],
         );
         console.log(`[migrate] created admin user ${adminEmail}`);
+      } else if (resetAdmin) {
+        const id = existing.rows[0].id;
+        await pool.query(
+          "update users set password_hash = $2, role = 'admin', access_all = true, is_active = true where id = $1",
+          [id, await hashPassword(adminPassword)],
+        );
+        await pool.query("delete from sessions where user_id = $1", [id]);
+        await pool.query("delete from auth_attempts where email = $1 and success = false", [adminEmail]);
+        console.log(`[migrate] reset the password for ${adminEmail}. Remove ADMIN_RESET_PASSWORD and ADMIN_PASSWORD now.`);
       }
     }
+  } else if (resetAdmin) {
+    console.warn("[migrate] ADMIN_RESET_PASSWORD is set, but ADMIN_EMAIL and ADMIN_PASSWORD are needed too.");
   }
+
+  // Shows in the build log which admin logins this database has (handy when one won't work).
+  const { rows: admins } = await pool.query("select email, is_active from users where role = 'admin' order by created_at");
+  console.log(
+    `[migrate] admin logins: ${admins.length ? admins.map((a) => a.email + (a.is_active ? "" : " (switched off)")).join(", ") : "none"}`,
+  );
 } catch (err) {
   console.error("[migrate] failed:", err);
   process.exitCode = 1;
