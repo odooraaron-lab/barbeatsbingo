@@ -3,7 +3,7 @@
 import { and, eq, gt, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { categories, enquiries } from "@/db/schema";
+import { categories, enquiries, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { sendEmail } from "@/lib/email";
 
@@ -55,4 +55,15 @@ export async function requestCategory(categoryId: string, _prev: RequestState): 
     });
   }
   return { status: "sent" };
+}
+
+/**
+ * Remembers whether this customer wants the player and bingo checker on show pages, or
+ * just the downloads. It's kept on their account, so it's the same on all their devices.
+ */
+export async function setPlayMode(on: boolean): Promise<{ ok: boolean }> {
+  const user = await requireUser();
+  if (typeof on !== "boolean" || (on && !user.canPlay)) return { ok: false };
+  await db.update(users).set({ playMode: on }).where(eq(users.id, user.id));
+  return { ok: true };
 }

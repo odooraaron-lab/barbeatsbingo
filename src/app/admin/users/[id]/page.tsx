@@ -63,6 +63,7 @@ export default async function UserPage({
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <h1 className="text-[clamp(2.1rem,5vw,3rem)]">{title}</h1>
         {!user.isActive && <span className="tag">Switched off</span>}
+        {!user.canPlay && user.role !== "admin" && <span className="tag">Downloads only</span>}
         {user.role === "admin" && <span className="tag bg-sun/15 text-sun">Admin</span>}
       </div>
       <p className="mt-1 text-mist">
@@ -108,6 +109,18 @@ export default async function UserPage({
                 </span>
               </label>
               {isSelf && <input type="hidden" name="isActive" value="on" />}
+              {user.role !== "admin" && (
+                <label className="check">
+                  <input type="checkbox" name="canPlay" defaultChecked={user.canPlay} />
+                  <span>
+                    <span className="block font-semibold">Can play shows on the site</span>
+                    <span className="block text-sm text-mist">
+                      The player, live call list and bingo checker on show pages. Switch off to give them just the
+                      downloads.
+                    </span>
+                  </span>
+                </label>
+              )}
             </ActionForm>
           </div>
         </section>

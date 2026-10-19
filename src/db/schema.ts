@@ -6,6 +6,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   real,
   text,
   timestamp,
@@ -13,6 +14,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { FileMeta } from "../lib/file-meta";
+import type { SyncState } from "../lib/show-sync";
 
 const timestamps = {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -46,6 +48,10 @@ export const users = pgTable("users", {
   isActive: boolean("is_active").notNull().default(true),
   accessAll: boolean("access_all").notNull().default(false),
   accessExpiresAt: timestamp("access_expires_at", { withTimezone: true }),
+  // Whether they may play shows on the site (player, call list, bingo checker). Admins always can.
+  canPlay: boolean("can_play").notNull().default(true),
+  // Their own choice on show pages: the player and checker shown, or just the downloads.
+  playMode: boolean("play_mode").notNull().default(true),
   notes: text("notes").notNull().default(""),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
   ...timestamps,
@@ -188,6 +194,25 @@ export const downloads = pgTable(
     ...timestamps,
   },
   (t) => [index("downloads_user_idx").on(t.userId), index("downloads_file_idx").on(t.fileId)],
+);
+
+/**
+ * Where a customer's game of a show is up to, shared by every device they have the show
+ * open on: one plays the sound, the others follow (and can pause it or move it on).
+ */
+export const showSyncs = pgTable(
+  "show_syncs",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    playlistId: uuid("playlist_id")
+      .notNull()
+      .references(() => playlists.id, { onDelete: "cascade" }),
+    state: jsonb("state").$type<SyncState>().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.playlistId] })],
 );
 
 export const enquiries = pgTable("enquiries", {

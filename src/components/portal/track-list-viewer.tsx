@@ -5,6 +5,7 @@ import { Download } from "lucide-react";
 import type { PageViewport, PDFDocumentProxy } from "pdfjs-dist";
 import { formatClock, parseCallList, type PdfTextItem, type PlacedSong } from "@/lib/call-list";
 import { useShowSession } from "./show-session";
+import { usePlayMode } from "./play-mode";
 
 type Status = "loading" | "ready" | "error";
 type PageSize = { width: number; height: number };
@@ -140,9 +141,11 @@ export function TrackListViewer({ src, downloadHref, title }: { src: string; dow
     };
   }, [pages]);
 
+  const { on: playing } = usePlayMode();
   const timed = session?.timed ?? false;
-  const currentN = session && spots.length ? session.played : 0;
-  const interactive = spots.length > 0 && !!session;
+  // The call list lights up and can be tapped while the play tools are on.
+  const interactive = playing && spots.length > 0 && !!session;
+  const currentN = interactive ? session.played : 0;
 
   return (
     <div ref={wrapRef}>

@@ -197,6 +197,19 @@ export async function getDownloadableFile(user: SessionUser, fileId: string) {
   return row.file;
 }
 
+/** The show, if this user may play it on the site right now (the player, call list and checker). */
+export async function getPlayableShow(user: SessionUser, playlistId: string) {
+  if (!user.canPlay || accessHasExpired(user)) return null;
+  const [row] = await db
+    .select({ id: playlists.id, categoryId: playlists.categoryId })
+    .from(playlists)
+    .innerJoin(categories, eq(playlists.categoryId, categories.id))
+    .where(and(eq(playlists.id, playlistId), publishedOnly(user, categories), publishedOnly(user, playlists)))
+    .limit(1);
+  if (!row) return null;
+  return canSeePlaylist(await getScope(user), row) ? row : null;
+}
+
 export async function searchLibrary(user: SessionUser, query: string) {
   const q = query.trim().slice(0, 100);
   if (q.length < 2 || accessHasExpired(user)) return { playlists: [], files: [] };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Pause, Play, RotateCcw, Square, Volume2 } from "lucide-react";
+import { Loader2, MonitorSmartphone, Pause, Play, RotateCcw, Square, Volume2 } from "lucide-react";
 import { songAt } from "@/lib/call-list";
 import { useShowSession } from "./show-session";
 
@@ -24,6 +24,9 @@ const finite = (n: number | null | undefined): n is number => n != null && Numbe
  *
  * `knownDuration` is the file's length worked out by the server, so the length
  * shows straight away. iPhones don't load any audio until Play is pressed.
+ *
+ * When the show is playing on another of the customer's devices, this one shows where
+ * that's up to instead, and its buttons work that device (or move the sound here).
  */
 export function AudioPlayer({
   src,
@@ -122,28 +125,32 @@ export function AudioPlayer({
     return seekable.length > 0 && seekable.end(seekable.length - 1) >= time;
   };
 
-  const play = (audio: HTMLAudioElement) => {
+  const play = (audio: HTMLAudioElement): Promise<boolean> => {
     const s = skipFor(lengthOf(audio));
     if (audio.readyState >= HTMLMediaElement.HAVE_METADATA) {
       if (audio.currentTime < s) toStart(audio);
-    } else if (s > 0) {
+    } else if (s > 0 && pendingSeekRef.current === null) {
       // Nothing loaded yet, so the browser can't jump past the intro until it has the file's details.
       startingRef.current = true;
       audio.muted = true;
     }
     setBuffering(true);
-    audio.play().catch((err: unknown) => {
-      // Pressing Pause before the sound starts rejects play() harmlessly; only a real format problem is fatal.
-      setBuffering(false);
-      cancelStarting(audio);
-      if (err instanceof DOMException && err.name === "NotSupportedError") setFailed(true);
-    });
+    return audio.play().then(
+      () => true,
+      (err: unknown) => {
+        // Pressing Pause before the sound starts rejects play() harmlessly; only a real format problem is fatal.
+        setBuffering(false);
+        cancelStarting(audio);
+        if (err instanceof DOMException && err.name === "NotSupportedError") setFailed(true);
+        return false;
+      },
+    );
   };
 
   const toggle = () => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (audio.paused) play(audio);
+    if (audio.paused) void play(audio);
     else audio.pause();
   };
 
@@ -152,6 +159,8 @@ export function AudioPlayer({
     if (!audio) return;
     audio.pause();
     toStart(audio);
+    // Stopping hands the show back: another device opened now gets its own player.
+    session?.release();
   };
 
   /** `value` is a position on the show's own clock (0 = end of the intro). */
@@ -187,24 +196,36 @@ export function AudioPlayer({
   const progress = known ? Math.min(100, (time / duration) * 100) : 0;
   const canSeek = known && loaded;
 
-  // Let the call list move the player, and tell it where the show is up to.
-  const seekRawRef = useRef(seekRaw);
+  // Let the call list (and the customer's other devices) move the player, and tell it
+  // where the show is up to.
+  const handleRef = useRef({ seekRaw, play });
   useEffect(() => {
-    seekRawRef.current = seekRaw;
+    handleRef.current = { seekRaw, play };
   });
   useEffect(() => {
     if (!registerPlayer) return;
-    registerPlayer({ seek: (t) => seekRawRef.current(t) });
+    registerPlayer({
+      seek: (t) => handleRef.current.seekRaw(t),
+      play: async () => (audioRef.current ? handleRef.current.play(audioRef.current) : false),
+      pause: () => audioRef.current?.pause(),
+    });
     return () => registerPlayer(null);
   }, [registerPlayer]);
   useEffect(() => {
     report?.(rawTime, playing);
   }, [report, rawTime, playing]);
 
+  // Playing on another of the customer's devices: show that, and work it from here.
+  const remote = session?.remote ?? null;
+  const remoteSkip = skipFor(rawDuration ?? knownDuration);
+  const shownTime = remote ? Math.max(0, Math.min(remote.time - remoteSkip, duration ?? Infinity)) : time;
+  const shownProgress = known ? Math.min(100, (shownTime / duration) * 100) : 0;
+  const shownPlaying = remote ? remote.playing : playing;
+
   // The song playing, when the call list says when each song starts. Before the first
   // song (e.g. while the file is still loading) it's about to be song 1.
   const songs = session?.timed ? (session.callList?.songs ?? null) : null;
-  const nowIndex = songs?.length ? Math.max(0, songAt(songs, rawTime)) : -1;
+  const nowIndex = songs?.length ? Math.max(0, songAt(songs, remote ? remote.time : rawTime)) : -1;
   const now = songs && nowIndex >= 0 ? songs[nowIndex] : null;
 
   // Lock screen and headphone controls on phones.
@@ -285,16 +306,22 @@ export function AudioPlayer({
         </div>
       ) : (
         <>
-          <div className="mt-6 flex items-baseline justify-between gap-3">
+          {remote && (
+            <p className="mt-4 flex items-center gap-2 rounded-lg bg-sun/10 px-3 py-2 text-sm text-sun" role="status">
+              <MonitorSmartphone size={16} aria-hidden className="shrink-0" />
+              {remote.playing ? "Playing on your other device." : "Paused on your other device."}
+            </p>
+          )}
+          <div className={`${remote ? "mt-4" : "mt-6"} flex items-baseline justify-between gap-3`}>
             <span className="display text-3xl tabular-nums" aria-hidden>
-              {formatTime(time)}
+              {formatTime(shownTime)}
             </span>
             <span className="text-right text-sm text-mist">
               {known ? (
                 <>
                   Length <strong className="tabular-nums text-white">{formatTime(duration)}</strong>
                 </>
-              ) : lengthLater && !playing ? (
+              ) : lengthLater && !shownPlaying ? (
                 "Length shows once it starts"
               ) : (
                 "Getting the length…"
@@ -304,46 +331,80 @@ export function AudioPlayer({
 
           <div className="relative mt-3 rounded-full has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-4 has-[:focus-visible]:outline-sun has-[:focus-visible]:outline">
             <div className="h-2 overflow-hidden rounded-full bg-white/10" aria-hidden>
-              <div className="h-full rounded-full bg-red" style={{ width: `${progress}%` }} />
+              <div className="h-full rounded-full bg-red" style={{ width: `${remote ? shownProgress : progress}%` }} />
             </div>
             {known && (
               <span
                 aria-hidden
                 className="pointer-events-none absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow"
-                style={{ left: `${progress}%` }}
+                style={{ left: `${remote ? shownProgress : progress}%` }}
               />
             )}
             {/* Taller than the bar so it's easy to grab with a finger. */}
             <input
               type="range"
               min={0}
-              max={canSeek ? duration : 0}
+              max={remote ? (known ? duration : 0) : canSeek ? duration : 0}
               step={1}
-              value={canSeek ? Math.min(time, duration) : 0}
-              disabled={!canSeek}
-              onChange={(e) => seek(Number(e.target.value))}
+              value={remote ? (known ? Math.min(shownTime, duration) : 0) : canSeek ? Math.min(time, duration) : 0}
+              disabled={remote ? !known : !canSeek}
+              onChange={(e) => (remote ? remote.seek(remoteSkip + Number(e.target.value)) : seek(Number(e.target.value)))}
               aria-label="Position in the show"
-              aria-valuetext={`${formatTime(time)} of ${known ? formatTime(duration) : "unknown length"}`}
+              aria-valuetext={`${formatTime(shownTime)} of ${known ? formatTime(duration) : "unknown length"}`}
               className="absolute inset-x-0 -top-4 h-10 w-full cursor-pointer opacity-0 disabled:cursor-default"
             />
           </div>
 
-          <div className="mt-5 flex gap-2">
-            <button type="button" onClick={toggle} className="btn btn-red flex-1" aria-pressed={playing}>
-              {buffering && playing ? (
-                <Loader2 size={18} aria-hidden className="animate-spin" />
-              ) : playing ? (
-                <Pause size={18} aria-hidden />
-              ) : (
-                <Play size={18} aria-hidden />
-              )}
-              {playing ? "Pause" : time > 0 ? "Resume" : "Play"}
-            </button>
-            <button type="button" onClick={stop} className="btn btn-ghost" disabled={!playing && time === 0}>
-              <Square size={16} aria-hidden /> Stop
-            </button>
-          </div>
-          {slow && (
+          {remote ? (
+            <>
+              <div className="mt-5 flex gap-2">
+                <button
+                  type="button"
+                  onClick={remote.playing ? remote.pause : remote.resume}
+                  className="btn btn-red flex-1"
+                  aria-pressed={remote.playing}
+                >
+                  {remote.playing ? <Pause size={18} aria-hidden /> : <Play size={18} aria-hidden />}
+                  {remote.playing ? "Pause" : "Resume"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    remote.pause();
+                    remote.seek(remoteSkip);
+                  }}
+                  className="btn btn-ghost"
+                  disabled={!remote.playing && shownTime === 0}
+                >
+                  <Square size={16} aria-hidden /> Stop
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={remote.takeOver}
+                className="mt-3 text-sm text-sun underline underline-offset-4"
+              >
+                Move the sound to this device
+              </button>
+            </>
+          ) : (
+            <div className="mt-5 flex gap-2">
+              <button type="button" onClick={toggle} className="btn btn-red flex-1" aria-pressed={playing}>
+                {buffering && playing ? (
+                  <Loader2 size={18} aria-hidden className="animate-spin" />
+                ) : playing ? (
+                  <Pause size={18} aria-hidden />
+                ) : (
+                  <Play size={18} aria-hidden />
+                )}
+                {playing ? "Pause" : time > 0 ? "Resume" : "Play"}
+              </button>
+              <button type="button" onClick={stop} className="btn btn-ghost" disabled={!playing && time === 0}>
+                <Square size={16} aria-hidden /> Stop
+              </button>
+            </div>
+          )}
+          {slow && !remote && (
             <p className="mt-3 text-sm text-mist" role="status">
               Still loading. This can take a little while on a slow connection.
             </p>
@@ -355,7 +416,7 @@ export function AudioPlayer({
               </span>
               <span className="line-clamp-2 min-w-0 pt-0.5">
                 <span className="text-mist">
-                  {playing ? "Now playing" : "Song"} {now.n} of {songs.length}:
+                  {shownPlaying ? "Now playing" : "Song"} {now.n} of {songs.length}:
                 </span>{" "}
                 <span className="font-semibold">{now.title}</span>
               </span>

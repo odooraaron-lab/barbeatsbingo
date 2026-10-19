@@ -92,6 +92,7 @@ export async function createUser(_prev: ActionResult, fd: FormData): Promise<Act
       ...data,
       isActive: true,
       accessAll: fd.get("accessAll") === "on",
+      canPlay: fd.get("canPlay") === "on",
       accessExpiresAt: expires,
       passwordHash: password ? await hashPassword(password) : null,
     })
@@ -127,7 +128,9 @@ export async function updateUser(id: string, _prev: ActionResult, fd: FormData):
     .limit(1);
   if (clash) return fail("Another customer already uses that email.");
 
-  await db.update(users).set({ ...data, isActive, accessExpiresAt: expires }).where(eq(users.id, id));
+  // Admins always have the play tools; the box is only on customers' pages.
+  const canPlay = data.role === "admin" || fd.get("canPlay") === "on";
+  await db.update(users).set({ ...data, isActive, canPlay, accessExpiresAt: expires }).where(eq(users.id, id));
   if (!isActive) await destroyAllSessionsFor(id);
 
   refresh();

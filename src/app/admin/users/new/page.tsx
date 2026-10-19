@@ -47,6 +47,13 @@ export default async function NewUserPage() {
             <input type="checkbox" name="accessAll" />
             <span>Give them access to everything in the library</span>
           </label>
+          <label className="check">
+            <input type="checkbox" name="canPlay" defaultChecked />
+            <span>
+              <span className="block font-semibold">Can play shows on the site</span>
+              <span className="block text-sm text-mist">The player, live call list and bingo checker on show pages.</span>
+            </span>
+          </label>
         </ActionForm>
       </div>
     </>

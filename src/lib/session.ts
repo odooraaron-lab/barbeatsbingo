@@ -57,6 +57,10 @@ export type SessionUser = {
   accessExpiresAt: Date | null;
   /** Worked out by the database, so pages never read the clock while rendering. */
   accessExpired: boolean;
+  /** May play shows on the site (the player, call list and bingo checker). Admins always can. */
+  canPlay: boolean;
+  /** Has the player and checker switched on, on show pages. */
+  playMode: boolean;
 };
 
 /** The signed-in user for this request, or null. Memoised per request. */
@@ -75,6 +79,8 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
       accessAll: users.accessAll,
       accessExpiresAt: users.accessExpiresAt,
       accessExpired: sql<boolean>`coalesce(${users.accessExpiresAt} < now(), false)`,
+      canPlay: sql<boolean>`(${users.canPlay} or ${users.role} = 'admin')`,
+      playMode: users.playMode,
     })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
