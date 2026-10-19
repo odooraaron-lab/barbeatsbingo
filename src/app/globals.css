@@ -151,6 +151,39 @@
     border-radius: var(--radius-card);
   }
 
+  /* A category on the library screen, glowing softly in its own colour (--glow, see genre-colours.ts). */
+  .genre-card {
+    --glow: 212 47 60;
+    --glow-text: 255 128 136;
+    background-color: var(--color-coal);
+    border: 1px solid rgb(var(--glow) / 0.32);
+    box-shadow:
+      0 0 0 1px rgb(var(--glow) / 0.06),
+      0 10px 28px -16px rgb(var(--glow) / 0.45);
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
+  }
+  .genre-card:hover {
+    border-color: rgb(var(--glow) / 0.65);
+    box-shadow:
+      0 0 0 1px rgb(var(--glow) / 0.16),
+      0 14px 34px -14px rgb(var(--glow) / 0.55);
+  }
+  .genre-card-wash {
+    background: radial-gradient(130% 120% at 0% 0%, rgb(var(--glow) / 0.15), transparent 55%);
+  }
+  .genre-card-disc {
+    background: rgb(var(--glow) / 0.16);
+    color: rgb(var(--glow-text));
+    box-shadow:
+      inset 0 0 0 1px rgb(var(--glow) / 0.5),
+      0 0 16px rgb(var(--glow) / 0.28);
+  }
+  .genre-card-count {
+    color: rgb(var(--glow-text));
+  }
+
   .label {
     display: block;
     font-size: 0.9rem;

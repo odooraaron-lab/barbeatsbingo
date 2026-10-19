@@ -3,6 +3,7 @@ import { ChevronRight, Lock, Play, Search } from "lucide-react";
 import { requireUser, accessHasExpired } from "@/lib/auth";
 import { listGenres, type GenreSummary } from "@/lib/library";
 import { InstallApp } from "@/components/portal/install-app";
+import { genreGlow } from "@/lib/genre-colours";
 
 const showCount = (n: number) => (n === 1 ? "1 show" : `${n} shows`);
 
@@ -10,17 +11,12 @@ function OpenCategory({ c }: { c: GenreSummary }) {
   return (
     <Link
       href={`/portal/${c.slug}`}
-      className="group relative flex h-full items-center gap-4 overflow-hidden rounded-2xl border border-red/45 bg-coal p-5 shadow-[0_0_0_1px_rgba(212,47,60,0.15),0_10px_30px_-12px_rgba(212,47,60,0.45)] transition hover:border-red-bright hover:shadow-[0_0_0_1px_rgba(255,93,104,0.35),0_14px_36px_-12px_rgba(212,47,60,0.6)]"
+      style={genreGlow(c.slug)}
+      className="genre-card group relative flex h-full items-center gap-4 overflow-hidden rounded-2xl p-5"
     >
-      {/* The warm glow is what marks a category as ready to play. */}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(130%_120%_at_0%_0%,rgba(212,47,60,0.28),transparent_55%)]"
-      />
-      <span
-        aria-hidden
-        className="relative grid h-12 w-12 shrink-0 place-items-center rounded-full bg-red text-white shadow-[0_0_18px_rgba(212,47,60,0.6)]"
-      >
+      {/* The glow (each category in its own colour) is what marks it as ready to play. */}
+      <span aria-hidden className="genre-card-wash pointer-events-none absolute inset-0" />
+      <span aria-hidden className="genre-card-disc relative grid h-12 w-12 shrink-0 place-items-center rounded-full">
         <Play size={20} className="translate-x-px" fill="currentColor" />
       </span>
       <span className="relative min-w-0 flex-1">
@@ -29,7 +25,7 @@ function OpenCategory({ c }: { c: GenreSummary }) {
           {!c.isPublished && <span className="tag">Hidden</span>}
         </span>
         {c.description && <span className="mt-1 line-clamp-2 text-sm text-mist">{c.description}</span>}
-        <span className="mt-2 block text-sm font-semibold text-red-bright">
+        <span className="genre-card-count mt-2 block text-sm font-semibold">
           {showCount(c.available)} ready to play
           {c.total > c.available && <span className="font-normal text-mist"> · {c.total - c.available} more locked</span>}
         </span>
