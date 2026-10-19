@@ -1,9 +1,5 @@
 import type { NextConfig } from "next";
 
-// Where the old WordPress site's photos can still be fetched from. Only used
-// for images that haven't been copied into public/images yet.
-const LEGACY_ORIGIN = (process.env.LEGACY_ASSET_ORIGIN || "https://www.barbeatsbingo.com").replace(/\/$/, "");
-
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
@@ -18,19 +14,6 @@ const nextConfig: NextConfig = {
       },
     },
   },
-  async rewrites() {
-    return {
-      beforeFiles: [],
-      afterFiles: [],
-      // Files in public/images win; anything missing falls through to the old site.
-      fallback: [
-        {
-          source: "/images/:path*",
-          destination: `${LEGACY_ORIGIN}/wp-content/uploads/:path*`,
-        },
-      ],
-    };
-  },
   async redirects() {
     return [
       // Old WordPress URLs people may have bookmarked.
@@ -38,6 +21,10 @@ const nextConfig: NextConfig = {
       { source: "/wp-login.php", destination: "/login", permanent: false },
       { source: "/home", destination: "/", permanent: true },
       { source: "/login/portal", destination: "/portal", permanent: false },
+      // WordPress's sitemaps, which search engines will still ask for.
+      { source: "/sitemap_index.xml", destination: "/sitemap.xml", permanent: true },
+      { source: "/wp-sitemap.xml", destination: "/sitemap.xml", permanent: true },
+      { source: "/:name(page|post)-sitemap.xml", destination: "/sitemap.xml", permanent: true },
     ];
   },
   async headers() {

@@ -66,19 +66,15 @@ To send emails automatically (password resets, customer invites, enquiry notific
 1. Create a [Resend](https://resend.com) account and verify the `barbeatsbingo.com` domain.
 2. Add `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `Bar Beats Bingo <hello@barbeatsbingo.com>`) and `CONTACT_EMAIL` (where enquiries go) in Vercel, then redeploy.
 
-## 4. Bring the photos across
+## 4. Photos
 
-The new pages use the photos from the old site. Until they're copied into this repo, they're loaded from the old WordPress server, which stops working once the domain moves.
-
-**Before switching the domain:** in GitHub, open **Actions → Copy photos from the old website → Run workflow**. It downloads the photos into `public/images/` and commits them.
-
-You can also add or replace photos by uploading files into `public/images/<year>/<month>/` with the same names. The list is in `src/lib/site.ts`.
-
-The logo in `public/brand/logo.png` was cut from a screenshot. For the sharpest result, replace it with the original logo file (transparent PNG, same name).
+The photos from the old site are already copied into `public/images/`. To add or replace one, upload a file into `public/images/<year>/<month>/` and add it to the list in `src/lib/site.ts`.
 
 ## 5. Point barbeatsbingo.com at Vercel
 
-In Vercel, **Settings → Domains → Add** `barbeatsbingo.com` and `www.barbeatsbingo.com`, then update the DNS records where the domain is registered as Vercel shows. Set `APP_URL=https://www.barbeatsbingo.com` so email links use the right address.
+In Vercel, **Settings → Domains → Add** `barbeatsbingo.com` and `www.barbeatsbingo.com`, then update the DNS records where the domain is registered as Vercel shows. Make `www.barbeatsbingo.com` the main one and have `barbeatsbingo.com` redirect to it. Set `APP_URL=https://www.barbeatsbingo.com` so email links use the right address.
+
+The site lists its public pages for search engines at `/sitemap.xml`, and `/robots.txt` keeps the portal and admin out of search results.
 
 ---
 
@@ -155,7 +151,6 @@ After changing `src/db/schema.ts`, run `npm run db:generate` to create a migrati
 | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Uploading files directly (optional) |
 | `RESEND_API_KEY`, `EMAIL_FROM`, `CONTACT_EMAIL` | Emails (optional) |
 | `APP_URL` | Links in emails (optional) |
-| `LEGACY_ASSET_ORIGIN` | Fallback address for photos not yet copied (optional) |
 
 ## How it fits together
 
