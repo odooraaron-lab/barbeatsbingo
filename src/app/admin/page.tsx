@@ -31,6 +31,7 @@ export default async function AdminHomePage() {
         .innerJoin(users, eq(users.id, downloads.userId))
         .innerJoin(files, eq(files.id, downloads.fileId))
         .innerJoin(playlists, eq(playlists.id, files.playlistId))
+        .where(eq(users.role, "member"))
         .orderBy(desc(downloads.createdAt))
         .limit(10),
       db.select().from(enquiries).orderBy(desc(enquiries.createdAt)).limit(4),

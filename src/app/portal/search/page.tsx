@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Download } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { searchLibrary } from "@/lib/library";
+import { downloadedShows, searchLibrary } from "@/lib/library";
 import { formatBytes, kindLabel } from "@/lib/format";
 import { Breadcrumbs } from "@/components/portal/breadcrumbs";
 import { FileIcon } from "@/components/portal/file-icon";
+import { DownloadedTag } from "@/components/portal/download-marks";
 
 export const metadata: Metadata = { title: "Search" };
 
@@ -14,6 +15,10 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const user = await requireUser();
   const results = await searchLibrary(user, q);
   const total = results.playlists.length + results.files.length;
+  const done = await downloadedShows(
+    user.id,
+    results.playlists.map((p) => p.id),
+  );
 
   return (
     <>
@@ -41,7 +46,10 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
                 {results.playlists.map((p) => (
                   <li key={`${p.categorySlug}/${p.slug}`}>
                     <Link href={`/portal/${p.categorySlug}/${p.slug}`} className="block px-5 py-4 hover:bg-white/[0.03]">
-                      <span className="block font-semibold">{p.name}</span>
+                      <span className="flex flex-wrap items-center gap-2 font-semibold">
+                        {p.name}
+                        {done.has(p.id) && <DownloadedTag at={done.get(p.id)!.toISOString()} />}
+                      </span>
                       <span className="text-sm text-mist">{p.categoryName}</span>
                     </Link>
                   </li>

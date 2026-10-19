@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq, ilike, inArray, max, ne, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
-import { accessGrants, categories, files, playlists } from "@/db/schema";
+import { accessGrants, categories, downloads, files, playlists, type FileKind } from "@/db/schema";
 import { accessHasExpired } from "./auth";
 import type { SessionUser } from "./session";
 
@@ -232,6 +232,7 @@ export async function searchLibrary(user: SessionUser, query: string) {
   const [playlistHits, fileHits] = await Promise.all([
     db
       .select({
+        id: playlists.id,
         name: playlists.name,
         slug: playlists.slug,
         categoryName: categories.name,
@@ -261,4 +262,39 @@ export async function searchLibrary(user: SessionUser, query: string) {
   ]);
 
   return { playlists: playlistHits, files: fileHits };
+}
+
+/** The kinds of file that are the show itself (not its scorecards or call list). */
+export const SHOW_FILE_KINDS: FileKind[] = ["video", "audio", "archive", "other"];
+
+/**
+ * When this user last downloaded each of these shows' show files: playlist id → date.
+ * A show counts as downloaded once its video (or audio) has been downloaded.
+ */
+export async function downloadedShows(userId: string, playlistIds: string[]) {
+  if (playlistIds.length === 0) return new Map<string, Date>();
+  const rows = await db
+    .select({ playlistId: files.playlistId, at: max(downloads.createdAt) })
+    .from(downloads)
+    .innerJoin(files, eq(files.id, downloads.fileId))
+    .where(
+      and(
+        eq(downloads.userId, userId),
+        inArray(files.playlistId, playlistIds),
+        inArray(files.kind, SHOW_FILE_KINDS),
+      ),
+    )
+    .groupBy(files.playlistId);
+  return new Map(rows.flatMap((r) => (r.at ? [[r.playlistId, r.at] as const] : [])));
+}
+
+/** When this user last downloaded each file of a show: file id → date. */
+export async function downloadedFiles(userId: string, playlistId: string) {
+  const rows = await db
+    .select({ fileId: downloads.fileId, at: max(downloads.createdAt) })
+    .from(downloads)
+    .innerJoin(files, eq(files.id, downloads.fileId))
+    .where(and(eq(downloads.userId, userId), eq(files.playlistId, playlistId)))
+    .groupBy(downloads.fileId);
+  return new Map(rows.flatMap((r) => (r.at ? [[r.fileId, r.at] as const] : [])));
 }

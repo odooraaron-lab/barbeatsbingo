@@ -2,10 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronRight, Lock } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { getGenre } from "@/lib/library";
+import { downloadedShows, getGenre } from "@/lib/library";
 import { formatBytes, formatDate } from "@/lib/format";
 import { Breadcrumbs } from "@/components/portal/breadcrumbs";
 import { RequestCategory } from "@/components/portal/request-category";
+import { DownloadedTag } from "@/components/portal/download-marks";
 
 const TEASER = 12;
 
@@ -30,6 +31,10 @@ export default async function GenrePage({ params }: { params: Promise<{ genre: s
   const data = await getGenre(user, genre);
   if (!data) notFound();
   const { category, playlists, lockedNames, expired } = data;
+  const done = await downloadedShows(
+    user.id,
+    playlists.map((p) => p.id),
+  );
   const count = (n: number) => (n === 1 ? "1 show" : `${n} shows`);
 
   return (
@@ -87,10 +92,12 @@ export default async function GenrePage({ params }: { params: Promise<{ genre: s
                   <span className="flex items-center gap-3">
                     <span className="truncate text-xl font-bold">{p.name}</span>
                     {!p.isPublished && <span className="tag">Hidden</span>}
+                    {done.has(p.id) && <DownloadedTag at={done.get(p.id)!.toISOString()} className="max-sm:hidden" />}
                   </span>
                   {p.description && <span className="mt-1 block truncate text-mist">{p.description}</span>}
-                  <span className="mt-1 block text-sm text-mist sm:hidden">
+                  <span className="mt-1 flex flex-wrap items-center gap-2 text-sm text-mist sm:hidden">
                     {p.fileCount === 1 ? "1 file" : `${p.fileCount} files`}
+                    {done.has(p.id) && <DownloadedTag at={done.get(p.id)!.toISOString()} />}
                   </span>
                 </span>
                 <span className="hidden shrink-0 text-right text-sm text-mist sm:block">

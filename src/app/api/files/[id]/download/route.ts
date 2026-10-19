@@ -35,7 +35,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return new NextResponse("This file can't be downloaded right now. Please contact us.", { status: 503 });
   }
 
-  if (!inline && user.role !== "admin") {
+  if (!inline) {
     await db.insert(downloads).values({ userId: user.id, fileId: file.id }).catch(() => {});
   }
 
