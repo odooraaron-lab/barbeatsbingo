@@ -55,7 +55,7 @@ export function UserFields({ values = {} }: { values?: Values }) {
           <label htmlFor="role" className="label">
             Account type
           </label>
-          <select id="role" name="role" className="field" defaultValue={values.role ?? "member"}>
+          <select key={values.role ?? "member"} id="role" name="role" className="field" defaultValue={values.role ?? "member"}>
             <option value="member">Customer</option>
             <option value="admin">Admin (can manage everything)</option>
           </select>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -22,13 +23,40 @@ export const metadata: Metadata = { title: "Show" };
 
 function KindSelect({ id, value }: { id: string; value?: FileKind }) {
   return (
-    <select id={id} name="kind" className="field" defaultValue={value ?? "video"}>
+    // Keyed on the saved value: a select's defaultValue only applies when it's first drawn, and the
+    // form resets to it after saving, so without the key it would jump back to the old value.
+    <select key={value ?? "video"} id={id} name="kind" className="field" defaultValue={value ?? "video"}>
       {FILE_KINDS.map((k) => (
         <option key={k.value} value={k.value}>
           {k.label}
         </option>
       ))}
     </select>
+  );
+}
+
+/** The arrow to the previous or next show in the category (greyed out at either end). */
+function ShowStep({ show, direction }: { show: { id: string; name: string } | null; direction: "prev" | "next" }) {
+  const Icon = direction === "prev" ? ChevronLeft : ChevronRight;
+  const word = direction === "prev" ? "Previous" : "Next";
+  if (!show) {
+    return (
+      <span aria-hidden className="btn btn-ghost btn-sm pointer-events-none px-2 opacity-35">
+        <Icon size={18} />
+      </span>
+    );
+  }
+  return (
+    <Link
+      href={`/admin/library/playlist/${show.id}`}
+      className="btn btn-ghost btn-sm gap-1 px-2"
+      title={`${word} show: ${show.name}`}
+      aria-label={`${word} show: ${show.name}`}
+    >
+      {direction === "prev" && <Icon size={18} aria-hidden />}
+      <span className="max-w-[9rem] truncate max-sm:hidden">{show.name}</span>
+      {direction === "next" && <Icon size={18} aria-hidden />}
+    </Link>
   );
 }
 
@@ -46,25 +74,45 @@ export default async function PlaylistAdminPage({ params }: { params: Promise<{ 
   if (!row) notFound();
   const { playlist, category } = row;
 
-  const [items, allCategories] = await Promise.all([
+  const [items, allCategories, siblings] = await Promise.all([
     db.select().from(files).where(eq(files.playlistId, playlistId)).orderBy(asc(files.sortOrder), asc(files.title)),
     db
       .select({ id: categories.id, name: categories.name })
       .from(categories)
       .orderBy(asc(categories.sortOrder), asc(categories.name)),
+    // The category's shows, in the same order as its list, for the previous / next arrows.
+    db
+      .select({ id: playlists.id, name: playlists.name })
+      .from(playlists)
+      .where(eq(playlists.categoryId, category.id))
+      .orderBy(asc(playlists.sortOrder), asc(playlists.name)),
   ]);
+  const at = siblings.findIndex((p) => p.id === playlist.id);
+  const prev = at > 0 ? siblings[at - 1] : null;
+  const next = at >= 0 && at < siblings.length - 1 ? siblings[at + 1] : null;
   const totalBytes = items.reduce((sum, f) => sum + (f.sizeBytes ?? 0), 0);
   const slots = filesBySlot(items);
 
   return (
     <>
-      <Breadcrumbs
-        items={[
-          { label: "Library", href: "/admin/library" },
-          { label: category.name, href: `/admin/library/${category.id}` },
-          { label: playlist.name },
-        ]}
-      />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Breadcrumbs
+          items={[
+            { label: "Library", href: "/admin/library" },
+            { label: category.name, href: `/admin/library/${category.id}` },
+            { label: playlist.name },
+          ]}
+        />
+        {siblings.length > 1 && (
+          <nav aria-label={`Other shows in ${category.name}`} className="flex items-center gap-1.5">
+            <ShowStep show={prev} direction="prev" />
+            <span className="px-1 text-sm whitespace-nowrap text-mist">
+              {at + 1} of {siblings.length}
+            </span>
+            <ShowStep show={next} direction="next" />
+          </nav>
+        )}
+      </div>
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <h1 className="text-[clamp(2.1rem,5vw,3rem)]">{playlist.name}</h1>
         <DifficultyTag value={playlist.difficulty} />
@@ -104,6 +152,7 @@ export default async function PlaylistAdminPage({ params }: { params: Promise<{ 
                     How hard is this show?
                   </label>
                   <select
+                    key={playlist.difficulty ?? "none"}
                     id="difficulty"
                     name="difficulty"
                     className="field sm:!w-60"
@@ -139,6 +188,7 @@ export default async function PlaylistAdminPage({ params }: { params: Promise<{ 
                         />
                         {slot.key === "show" && (
                           <select
+                            key={current?.kind ?? "video"}
                             name="showKind"
                             aria-label="Type of show file"
                             className="field sm:!w-40"
@@ -319,7 +369,13 @@ export default async function PlaylistAdminPage({ params }: { params: Promise<{ 
                     <label htmlFor="pl-category" className="label">
                       Category
                     </label>
-                    <select id="pl-category" name="categoryId" className="field" defaultValue={category.id}>
+                    <select
+                      key={category.id}
+                      id="pl-category"
+                      name="categoryId"
+                      className="field"
+                      defaultValue={category.id}
+                    >
                       {allCategories.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name}
