@@ -5,6 +5,7 @@ import { getSessionUser } from "@/lib/session";
 import { getDownloadableFile } from "@/lib/library";
 import { presignDownload, storageConfigured } from "@/lib/storage";
 import { directDownloadUrl } from "@/lib/format";
+import { logActivity } from "@/lib/activity";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -37,6 +38,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   if (!inline) {
     await db.insert(downloads).values({ userId: user.id, fileId: file.id }).catch(() => {});
+    await logActivity(user.id, "downloaded", { playlistId: file.playlistId, fileId: file.id, detail: file.title });
   }
 
   const res = NextResponse.redirect(target, 302);

@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { categories, enquiries, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { contactEmail, sendEmail } from "@/lib/email";
+import { logActivity } from "@/lib/activity";
 
 export type RequestState = { status: "idle" | "sent" | "error"; message?: string };
 
@@ -41,6 +42,7 @@ export async function requestCategory(categoryId: string, _prev: RequestState): 
   const name = [user.name, user.venue && `(${user.venue})`].filter(Boolean).join(" ");
   try {
     await db.insert(enquiries).values({ name, email: user.email, message });
+    await logActivity(user.id, "category_requested", { detail: category.name });
   } catch (err) {
     console.error("[portal] could not save category request", err);
     return { status: "error", message: "That didn't go through. Please try again in a minute." };
@@ -65,5 +67,6 @@ export async function setPlayMode(on: boolean): Promise<{ ok: boolean }> {
   const user = await requireUser();
   if (typeof on !== "boolean" || (on && !user.canPlay)) return { ok: false };
   await db.update(users).set({ playMode: on }).where(eq(users.id, user.id));
+  await logActivity(user.id, "play_mode_changed", { detail: on ? "on" : "off" });
   return { ok: true };
 }

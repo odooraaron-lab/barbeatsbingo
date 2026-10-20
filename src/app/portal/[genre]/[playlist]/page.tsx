@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { after } from "next/server";
+import { logActivity } from "@/lib/activity";
 import { Download, Play } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { SHOW_FILE_KINDS, downloadedFiles, getPlaylist } from "@/lib/library";
@@ -25,6 +27,7 @@ export default async function ShowPage({ params }: { params: Promise<{ genre: st
   const data = await getPlaylist(user, genre, showSlug);
   if (!data) notFound();
   const { category, playlist: show } = data;
+  after(() => logActivity(user.id, "show_viewed", { playlistId: show.id, detail: show.name, onceEveryMinutes: 30 }));
   const allFiles = data.files;
   const files = downloadableFiles(allFiles);
   // What they've downloaded before, so the page can say so.

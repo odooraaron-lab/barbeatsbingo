@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { after } from "next/server";
+import { logActivity } from "@/lib/activity";
 import { Download } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { downloadedShows, searchLibrary } from "@/lib/library";
@@ -16,6 +18,11 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const user = await requireUser();
   const results = await searchLibrary(user, q);
   const total = results.playlists.length + results.files.length;
+  const words = q.trim().slice(0, 100);
+  if (words.length >= 2) {
+    // What customers look for (and don't find) says what to add to the library.
+    after(() => logActivity(user.id, "searched", { detail: total ? words : `${words} · nothing found`, onceEveryMinutes: 10 }));
+  }
   const done = await downloadedShows(
     user.id,
     results.playlists.map((p) => p.id),

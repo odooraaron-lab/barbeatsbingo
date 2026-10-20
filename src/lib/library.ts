@@ -203,7 +203,7 @@ export async function getDownloadableFile(user: SessionUser, fileId: string) {
 export async function getPlayableShow(user: SessionUser, playlistId: string) {
   if (!user.canPlay || accessHasExpired(user)) return null;
   const [row] = await db
-    .select({ id: playlists.id, categoryId: playlists.categoryId })
+    .select({ id: playlists.id, categoryId: playlists.categoryId, name: playlists.name })
     .from(playlists)
     .innerJoin(categories, eq(playlists.categoryId, categories.id))
     .where(and(eq(playlists.id, playlistId), publishedOnly(user, categories), publishedOnly(user, playlists)))

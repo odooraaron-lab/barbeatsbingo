@@ -249,3 +249,38 @@ export const songArt = pgTable("song_art", {
   source: text("source"),
   lookedUpAt: timestamp("looked_up_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const activityKind = pgEnum("activity_kind", [
+  "downloaded",
+  "login",
+  "login_failed",
+  "show_viewed",
+  "show_played",
+  "searched",
+  "category_requested",
+  "password_changed",
+  "password_reset",
+  "play_mode_changed",
+]);
+export type ActivityKind = (typeof activityKind.enumValues)[number];
+
+/**
+ * What a customer has done on the site, for their page in the admin. Names are copied in
+ * (`detail`), so the history still reads right after a show or file is renamed or deleted.
+ */
+export const activity = pgTable(
+  "activity",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    kind: activityKind("kind").notNull(),
+    playlistId: uuid("playlist_id").references(() => playlists.id, { onDelete: "set null" }),
+    fileId: uuid("file_id").references(() => files.id, { onDelete: "set null" }),
+    // The show's name, the file's title, the words searched for, the category asked for…
+    detail: text("detail").notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("activity_user_idx").on(t.userId, t.createdAt), index("activity_user_kind_idx").on(t.userId, t.kind, t.createdAt)],
+);

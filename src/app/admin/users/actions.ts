@@ -10,6 +10,7 @@ import { requireAdmin } from "@/lib/auth";
 import { hashPassword, passwordProblem } from "@/lib/password";
 import { destroyAllSessionsFor } from "@/lib/session";
 import { emailConfigured, sendEmail } from "@/lib/email";
+import { logActivity } from "@/lib/activity";
 import { createPasswordLink } from "@/lib/password-links";
 import { fail, ok, type ActionResult } from "@/lib/action-result";
 import { toDateInput } from "@/lib/format";
@@ -173,6 +174,7 @@ export async function setUserPassword(id: string, _prev: ActionResult, fd: FormD
 
   await db.update(users).set({ passwordHash: await hashPassword(password) }).where(eq(users.id, id));
   if (id !== admin.id) await destroyAllSessionsFor(id);
+  await logActivity(id, "password_changed", { detail: "Set by an admin" });
   return ok("Password set. Let them know their new password.");
 }
 

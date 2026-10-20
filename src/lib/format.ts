@@ -38,6 +38,25 @@ export function formatDateTime(d: Date | string | null | undefined) {
   return dateTimeFormat.format(typeof d === "string" ? new Date(d) : d);
 }
 
+const timeFormat = new Intl.DateTimeFormat("en-NZ", { hour: "numeric", minute: "2-digit", timeZone: "Pacific/Auckland" });
+const dayFormat = new Intl.DateTimeFormat("en-NZ", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "Pacific/Auckland",
+});
+
+/** "3:05 pm", NZ time. */
+export function formatTime(d: Date) {
+  return timeFormat.format(d);
+}
+
+/** "Tuesday, 20 October 2026", NZ time. */
+export function formatDay(d: Date) {
+  return dayFormat.format(d);
+}
+
 /** yyyy-mm-dd for <input type="date">, in NZ time. */
 export function toDateInput(d: Date | null | undefined) {
   if (!d) return "";

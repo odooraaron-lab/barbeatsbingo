@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { accessGrants, categories, downloads, files, playlists, users } from "@/db/schema";
+import { accessGrants, categories, playlists, users } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { emailConfigured } from "@/lib/email";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -12,6 +12,14 @@ import { UserFields } from "@/components/admin/user-fields";
 import { AccessEditor } from "@/components/admin/access-editor";
 import { PasswordInput } from "@/components/admin/password-input";
 import { Breadcrumbs } from "@/components/portal/breadcrumbs";
+import { ActivitySummaryRow, ActivityTimeline, DownloadedShows } from "@/components/admin/customer-activity";
+import {
+  ACTIVITY_FILTERS,
+  customerDownloadedShows,
+  customerSummary,
+  customerTimeline,
+  type ActivityFilter,
+} from "@/lib/customer-activity";
 import { deleteUser, saveAccess, sendPasswordLink, setUserPassword, updateUser } from "../actions";
 
 export const metadata: Metadata = { title: "Customer" };
@@ -21,28 +29,25 @@ export default async function UserPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ created?: string }>;
+  searchParams: Promise<{ created?: string; log?: string; n?: string }>;
 }) {
   const admin = await requireAdmin();
   const { id } = await params;
-  const { created } = await searchParams;
+  const { created, log, n } = await searchParams;
+  const filter: ActivityFilter = log && log in ACTIVITY_FILTERS ? (log as ActivityFilter) : "all";
+  const limit = Math.min(Math.max(Number(n) || 60, 60), 2000);
   if (!z.uuid().safeParse(id).success) notFound();
 
   const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1);
   if (!user) notFound();
 
-  const [grants, cats, pls, recent] = await Promise.all([
+  const [grants, cats, pls, summary, shows, timeline] = await Promise.all([
     db.select().from(accessGrants).where(eq(accessGrants.userId, id)),
     db.select().from(categories).orderBy(asc(categories.sortOrder), asc(categories.name)),
     db.select().from(playlists).orderBy(asc(playlists.sortOrder), asc(playlists.name)),
-    db
-      .select({ at: downloads.createdAt, title: files.title, playlist: playlists.name })
-      .from(downloads)
-      .innerJoin(files, eq(files.id, downloads.fileId))
-      .innerJoin(playlists, eq(playlists.id, files.playlistId))
-      .where(eq(downloads.userId, id))
-      .orderBy(desc(downloads.createdAt))
-      .limit(15),
+    customerSummary(id),
+    customerDownloadedShows(id),
+    customerTimeline(id, filter, limit),
   ]);
 
   const genres = cats.map((c) => ({
@@ -159,26 +164,23 @@ export default async function UserPage({
           </div>
         </section>
 
-        <section className="panel p-6 sm:p-8" aria-labelledby="downloads-heading">
-          <h2 id="downloads-heading" className="font-sans text-xl font-bold">
-            Recent downloads
-          </h2>
-          {recent.length === 0 ? (
-            <p className="mt-3 text-mist">No downloads yet.</p>
-          ) : (
-            <ul className="mt-3 divide-y divide-line">
-              {recent.map((d, i) => (
-                <li key={i} className="flex flex-wrap justify-between gap-x-4 py-2.5">
-                  <span>
-                    {d.title} <span className="text-sm text-fog">· {d.playlist}</span>
-                  </span>
-                  <span className="text-sm text-mist">{formatDateTime(d.at)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+
       </div>
+
+      <section className="panel mt-6 p-6 sm:p-8" aria-labelledby="activity-heading" id="activity">
+        <h2 id="activity-heading" className="font-sans text-xl font-bold">
+          Activity
+        </h2>
+        <div className="mt-4">
+          <ActivitySummaryRow summary={summary} lastLogin={user.lastLoginAt} />
+        </div>
+
+        <h3 className="mt-8 font-sans text-lg font-bold">Shows they&apos;ve downloaded</h3>
+        <DownloadedShows shows={shows} />
+
+        <h3 className="mt-8 font-sans text-lg font-bold">Everything they&apos;ve done</h3>
+        <ActivityTimeline events={timeline.events} more={timeline.more} filter={filter} limit={limit} />
+      </section>
 
       {!isSelf && (
         <section className="mt-10 max-w-3xl rounded-[var(--radius-card)] border border-red/40 p-6 sm:p-8">

@@ -10,6 +10,7 @@ import { getDummyHash, hashPassword, passwordProblem, verifyPassword } from "@/l
 import { safeNextPath } from "@/lib/auth";
 import { emailConfigured, sendEmail } from "@/lib/email";
 import { createPasswordLink, findValidToken } from "@/lib/password-links";
+import { logActivity } from "@/lib/activity";
 
 export type FormState = { error?: string; ok?: string; email?: string };
 
@@ -52,6 +53,7 @@ export async function login(_prev: FormState, formData: FormData): Promise<FormS
 
   await db.insert(authAttempts).values({ email, ip: await clientIp(), success: ok });
 
+  if (user && !ok) await logActivity(user.id, "login_failed");
   if (!user || !ok) {
     return { error: "That email and password don't match. Check them and try again.", email };
   }
@@ -61,6 +63,7 @@ export async function login(_prev: FormState, formData: FormData): Promise<FormS
 
   await createSession(user.id);
   await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
+  await logActivity(user.id, "login");
 
   // Light housekeeping.
   const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -124,6 +127,7 @@ export async function setPasswordFromToken(_prev: FormState, formData: FormData)
   await destroyAllSessionsFor(row.userId);
   await createSession(row.userId);
   await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, row.userId));
+  await logActivity(row.userId, "password_reset");
 
   redirect("/portal");
 }
