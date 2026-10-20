@@ -48,10 +48,13 @@ export default async function NewUserPage() {
             <span>Give them access to everything in the library</span>
           </label>
           <label className="check">
-            <input type="checkbox" name="canPlay" defaultChecked />
+            <input type="checkbox" name="canPlay" />
             <span>
               <span className="block font-semibold">Can play shows on the site</span>
-              <span className="block text-sm text-mist">The player, live call list and bingo checker on show pages.</span>
+              <span className="block text-sm text-mist">
+                The player, live call list and bingo checker on show pages. Leave unticked to give them just the
+                downloads.
+              </span>
             </span>
           </label>
         </ActionForm>

@@ -1,0 +1,1 @@
+ALTER TABLE "users" ALTER COLUMN "can_play" SET DEFAULT false;
