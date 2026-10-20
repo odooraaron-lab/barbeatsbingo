@@ -1136,11 +1136,12 @@
 }
 
 /* Your scorecard, as printed, on the table in front of you */
+/* The whole card stays in view: the game plays on to Blackout, so every row matters. */
 .show-card-wrap {
   position: absolute;
   right: 2.6cqw;
-  bottom: -15cqw;
-  width: 47cqw;
+  bottom: 2.4cqw;
+  width: 44cqw;
   rotate: -4deg;
   transform-origin: 70% 90%;
 }
