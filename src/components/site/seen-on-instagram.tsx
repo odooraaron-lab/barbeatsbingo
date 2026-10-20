@@ -31,7 +31,7 @@ export async function SeenOnInstagram() {
           const kind = WORD[kindOf(p.url)];
           const who = p.handle ? `@${p.handle}` : `A Bar Beats Bingo ${kind}`;
           return (
-            <li key={p.id}>
+            <li key={p.id} className="min-w-0">
               <a
                 href={p.url}
                 target="_blank"
