@@ -63,8 +63,9 @@ Without email, everything still works: when a customer forgets their password, y
 
 To send emails automatically (password resets, customer invites, enquiry notifications):
 
-1. Create a [Resend](https://resend.com) account and verify the `barbeatsbingo.com` domain.
-2. Add `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `Bar Beats Bingo <hello@barbeatsbingo.com>`) and `CONTACT_EMAIL` (where enquiries go) in Vercel, then redeploy.
+1. Create a [Resend](https://resend.com) account. Under **Domains**, add `barbeatsbingo.com` and add the DNS records it shows where the domain's DNS is managed. Wait until it says **Verified**: until then Resend won't send.
+2. Add `RESEND_API_KEY` in Vercel. Optionally add `EMAIL_FROM` (defaults to `Bar Beats Bingo <hello@barbeatsbingo.com>`) and `CONTACT_EMAIL` (where enquiries go; defaults to `ADMIN_EMAIL`). Then redeploy.
+3. In the admin, open **Enquiries → Send a test email**. If it can't send, it says why.
 
 ## 4. Photos
 
@@ -149,7 +150,7 @@ After changing `src/db/schema.ts`, run `npm run db:generate` to create a migrati
 | `DATABASE_URL` | Everything (Neon) |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Creating the first admin |
 | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Uploading files directly (optional) |
-| `RESEND_API_KEY`, `EMAIL_FROM`, `CONTACT_EMAIL` | Emails (optional) |
+| `RESEND_API_KEY` (plus optional `EMAIL_FROM`, `CONTACT_EMAIL`) | Emails (optional) |
 | `APP_URL` | Links in emails (optional) |
 | `ADMIN_RESET_PASSWORD` | Set to `yes` with `ADMIN_EMAIL` and `ADMIN_PASSWORD` to reset a lost admin login on the next deploy, then remove all three |
 

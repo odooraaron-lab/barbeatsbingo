@@ -84,7 +84,8 @@ export default async function AdminHomePage() {
           {!emailConfigured() && (
             <p className="alert alert-info">
               <strong>Emails are off.</strong> Customers can&apos;t reset their own passwords and you won&apos;t get
-              emailed about enquiries. Add a Resend API key in Vercel to switch this on.
+              emailed about enquiries. Add RESEND_API_KEY in Vercel and redeploy to switch this on, then
+              send a test email from the Enquiries page.
             </p>
           )}
         </section>

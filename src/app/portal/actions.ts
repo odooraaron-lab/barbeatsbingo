@@ -5,7 +5,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { categories, enquiries, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
-import { sendEmail } from "@/lib/email";
+import { contactEmail, sendEmail } from "@/lib/email";
 
 export type RequestState = { status: "idle" | "sent" | "error"; message?: string };
 
@@ -45,7 +45,7 @@ export async function requestCategory(categoryId: string, _prev: RequestState): 
     console.error("[portal] could not save category request", err);
     return { status: "error", message: "That didn't go through. Please try again in a minute." };
   }
-  const to = process.env.CONTACT_EMAIL;
+  const to = contactEmail();
   if (to) {
     await sendEmail({
       to,

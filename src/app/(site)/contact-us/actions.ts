@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { db } from "@/db";
 import { enquiries } from "@/db/schema";
-import { sendEmail } from "@/lib/email";
+import { contactEmail, sendEmail } from "@/lib/email";
 
 export type ContactState = { status: "idle" | "sent" | "error"; message?: string; fields?: Record<string, string> };
 
@@ -39,7 +39,7 @@ export async function sendEnquiry(_prev: ContactState, formData: FormData): Prom
     console.error("[contact] could not save enquiry", err);
   }
 
-  const to = process.env.CONTACT_EMAIL;
+  const to = contactEmail();
   const emailed = to
     ? await sendEmail({
         to,
