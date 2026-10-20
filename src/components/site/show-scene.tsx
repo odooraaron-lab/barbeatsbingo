@@ -93,7 +93,7 @@ const MIC_AT = { dx: 31, dy: 10 };
 
 type State = {
   round: number;
-  /** Index into CALLS of the video on the TV; -1 shows the round's title screen. */
+  /** Index into CALLS of the video on the TV; -1 shows the game's title screen. */
   call: number;
   marked: number[];
   bingo: boolean;
@@ -499,7 +499,7 @@ function Tv({ state }: { state: State }) {
         ) : (
           <span key={`title-${state.round}`} className="show-title">
             <Image src="/brand/logo.png" alt="" width={720} height={376} sizes={LOGO_SIZES} className="show-title-logo" />
-            <span className="show-title-round">Round {state.round}</span>
+            <span className="show-title-round">Game {state.round}</span>
           </span>
         )}
         {state.bingo && (
@@ -722,7 +722,7 @@ export function ShowScene({ className = "" }: { className?: string }) {
         await wait(5400);
         setState((s) => ({ ...s, clearing: true }));
         await wait(900);
-        round = round >= 9 ? 1 : round + 1;
+        round = round >= 4 ? 1 : round + 1; // four quick fire games in a pack
       }
     })();
 

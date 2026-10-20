@@ -1,6 +1,7 @@
 import {
   bigint,
   boolean,
+  customType,
   index,
   integer,
   jsonb,
@@ -254,6 +255,7 @@ export const songArt = pgTable("song_art", {
 
 export const activityKind = pgEnum("activity_kind", [
   "downloaded",
+  "guide_downloaded",
   "login",
   "login_failed",
   "show_viewed",
@@ -286,3 +288,20 @@ export const activity = pgTable(
   },
   (t) => [index("activity_user_idx").on(t.userId, t.createdAt), index("activity_user_kind_idx").on(t.userId, t.kind, t.createdAt)],
 );
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType: () => "bytea",
+});
+
+/**
+ * Files the site serves that aren't part of a show, kept in the database so they're never
+ * in the (public) code, e.g. the host guide customers download from the portal.
+ */
+export const siteFiles = pgTable("site_files", {
+  key: text("key").primaryKey(),
+  fileName: text("file_name").notNull(),
+  contentType: text("content_type").notNull(),
+  sizeBytes: integer("size_bytes").notNull(),
+  data: bytea("data").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

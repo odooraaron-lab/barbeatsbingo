@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  BookOpen,
   Download,
   Eye,
   KeyRound,
@@ -32,6 +33,7 @@ const showLink = (id: string | null, name: string) =>
 
 const ICONS: Record<ActivityKind, { icon: LucideIcon; tone: string }> = {
   downloaded: { icon: Download, tone: "text-ok" },
+  guide_downloaded: { icon: BookOpen, tone: "text-ok" },
   login: { icon: LogIn, tone: "text-mist" },
   login_failed: { icon: ShieldAlert, tone: "text-red-bright" },
   show_viewed: { icon: Eye, tone: "text-mist" },
@@ -51,6 +53,12 @@ function describe(e: ActivityEvent) {
         <>
           Downloaded <span className="text-white">{e.detail}</span>
           {e.showName ? <> from {showLink(e.showId, e.showName)}</> : <span className="text-fog"> (show since deleted)</span>}
+        </>
+      );
+    case "guide_downloaded":
+      return (
+        <>
+          Downloaded the <span className="text-white">host guide</span>
         </>
       );
     case "login":

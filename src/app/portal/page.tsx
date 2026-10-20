@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { ChevronRight, Lock, Play, Search } from "lucide-react";
+import { BookOpen, ChevronRight, Download, Lock, Play, Search } from "lucide-react";
 import { requireUser, accessHasExpired } from "@/lib/auth";
 import { listGenres, type GenreSummary } from "@/lib/library";
 import { InstallApp } from "@/components/portal/install-app";
 import { genreGlow } from "@/lib/genre-colours";
 import { categoryCovers, type Cover } from "@/lib/album-art";
+import { CoverImage } from "@/components/portal/cover-image";
+import { HOST_GUIDE, siteFileInfo } from "@/lib/site-files";
 
 const showCount = (n: number) => (n === 1 ? "1 show" : `${n} shows`);
 
@@ -14,20 +16,7 @@ function CoverStrip({ covers }: { covers: Cover[] }) {
   return (
     <span aria-hidden className="relative grid grid-cols-10 gap-1 pt-4">
       {covers.map((c) => (
-        // Tiny thumbnails from the music catalogue's own image server; no resizing needed.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          key={c.url}
-          src={c.url}
-          alt=""
-          title={c.label}
-          width={56}
-          height={56}
-          loading="lazy"
-          decoding="async"
-          referrerPolicy="no-referrer"
-          className="aspect-square w-full rounded-[3px] bg-ink object-cover opacity-80 ring-1 ring-white/10 transition-opacity group-hover:opacity-100"
-        />
+        <CoverImage key={c.url} src={c.url} label={c.label} />
       ))}
     </span>
   );
@@ -105,6 +94,36 @@ function OtherCategory({ c, expired }: { c: GenreSummary; expired: boolean }) {
   );
 }
 
+/** The Quick Fire host guide (PDF), for every customer. */
+function HostGuide() {
+  return (
+    <section aria-labelledby="guide-heading" className="panel mt-12 flex flex-col gap-5 p-6 sm:flex-row sm:items-center">
+      <span aria-hidden className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-sun/15 text-sun">
+        <BookOpen size={26} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <h2 id="guide-heading" className="font-sans text-xl font-bold">
+          Host guide
+        </h2>
+        <p className="mt-1 text-mist">
+          Everything for a great night: setting up, running each game, host tips, prize ideas and crowd game
+          prompts for the breaks.
+        </p>
+      </div>
+      <div className="flex shrink-0 flex-wrap gap-2">
+        {/* A file download (route handler), not a page, so a plain link. */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        <a href="/portal/host-guide" className="btn btn-red">
+          <Download size={18} aria-hidden /> Download PDF
+        </a>
+        <a href="/portal/host-guide?view=1" target="_blank" rel="noreferrer" className="btn btn-ghost">
+          Open
+        </a>
+      </div>
+    </section>
+  );
+}
+
 export default async function PortalHomePage() {
   const user = await requireUser();
   const all = await listGenres(user);
@@ -113,7 +132,7 @@ export default async function PortalHomePage() {
   const anyLocked = others.some((c) => c.state === "locked");
   const firstName = user.name.trim().split(/\s+/)[0];
   const expired = accessHasExpired(user);
-  const covers = await categoryCovers(open.map((c) => c.id));
+  const [covers, guide] = await Promise.all([categoryCovers(open.map((c) => c.id)), siteFileInfo(HOST_GUIDE)]);
 
   return (
     <>
@@ -160,6 +179,8 @@ export default async function PortalHomePage() {
           </ul>
         </section>
       )}
+
+      {guide && <HostGuide />}
 
       {others.length > 0 && (
         <section aria-labelledby="more-heading" className="mt-12">

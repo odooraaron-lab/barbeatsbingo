@@ -3,6 +3,7 @@ import { HandHeart, Music2, Smile, Sparkles } from "lucide-react";
 import { ShowScene } from "@/components/site/show-scene";
 import { Photo } from "@/components/site/photo";
 import { CallToAction } from "@/components/site/call-to-action";
+import { CrowdPrompts, QuickFireGlance } from "@/components/site/quick-fire";
 import { IMAGES } from "@/lib/site";
 
 const STATS = [
@@ -13,20 +14,20 @@ const STATS = [
 
 const NIGHT = [
   {
-    title: "Print the scorecards",
-    body: "Every player gets a different card of songs and a marker.",
+    title: "Hand out scorecards",
+    body: "Every card is different, so luck plays a part. One per player or pair, with a marker.",
   },
   {
-    title: "Press play",
-    body: "The show plays music videos on your screens. Each round runs about 15 to 20 minutes.",
+    title: "Name the way to win",
+    body: "Tell the room this game's winning pattern, like 1 line or the Cross, then press play.",
   },
   {
-    title: "Mark off the songs",
-    body: "Players cross off each song as it plays. Prizes go to 1 line, 2 or 3 lines, the cross and a full card.",
+    title: "Cross off the songs",
+    body: "Each song plays for 25 seconds, so a quick fire game is over in 15 to 25 minutes.",
   },
   {
-    title: "Check the card",
-    body: "Someone shouts BINGO! Pause the show from your phone, check their card against the call list and hand over the prize.",
+    title: "Someone yells BINGO!",
+    body: "Pause, check their card against the track listing and hand over the prize. End there, or play on to Blackout.",
   },
 ];
 
@@ -102,8 +103,8 @@ export default function HomePage() {
 
           <div className="[grid-area:act] lg:self-start">
             <p className="max-w-md text-[1.08rem] leading-relaxed text-white/90 sm:text-lg">
-              Music videos play on your screens. Players mark off the songs they hear and shout BINGO when they get a
-              line.
+              Quick fire games of music video bingo. Songs play in 25-second clips, players cross them off their cards,
+              and the first to the winning pattern shouts BINGO!
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link href="/contact-us" className="btn btn-red flex-1 sm:flex-none">
@@ -154,6 +155,7 @@ export default function HomePage() {
             </li>
           ))}
         </ol>
+        <QuickFireGlance className="mt-10" />
       </section>
 
       {/* Music styles */}
@@ -162,7 +164,7 @@ export default function HomePage() {
           Pick the music
         </h2>
         <p className="mt-3 max-w-xl text-white/90">
-          From disco nights and 80s anthems to today&apos;s hits, every round stays fresh. New shows are added all the
+          From disco nights and 80s anthems to today&apos;s hits, every game stays fresh. New shows are added all the
           time.
         </p>
         <ul className="mt-7 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
@@ -181,7 +183,7 @@ export default function HomePage() {
           <h2 className="text-[clamp(2rem,6vw,3.2rem)]">Run the show from your phone</h2>
           <p className="mt-4 max-w-lg text-lg text-white/90">
             When someone shouts BINGO!, pause the game from the remote app or your laptop and check their card. Then
-            press play for the next winner. Too easy.
+            press play to carry on to Blackout, or start the next game. Too easy.
           </p>
         </div>
         <Photo
@@ -214,6 +216,25 @@ export default function HomePage() {
             </li>
           ))}
         </ul>
+      </section>
+
+      {/* The crowd game */}
+      <section className="wrap mt-20 sm:mt-24" aria-labelledby="crowd-heading">
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+          <h2 id="crowd-heading" className="text-[clamp(2rem,6vw,3.2rem)]">
+            Laughs between games
+          </h2>
+          <Link href="/faq-tips#crowd-game" className="font-semibold text-red-bright underline underline-offset-4">
+            How the crowd game works
+          </Link>
+        </div>
+        <p className="mt-3 max-w-2xl text-white/90">
+          Fill the break with a crowd game. Read out a prompt, players write their answer on the back of their scorecard,
+          and the biggest cheer wins a bonus prize.
+        </p>
+        <div className="mt-7">
+          <CrowdPrompts limit={4} />
+        </div>
       </section>
 
       {/* Testimonials */}

@@ -3,74 +3,71 @@ import Link from "next/link";
 import { PageIntro } from "@/components/site/page-intro";
 import { Photo } from "@/components/site/photo";
 import { CallToAction } from "@/components/site/call-to-action";
+import { QuickFireGlance, WhatYouNeed, WinningPatterns } from "@/components/site/quick-fire";
 import { IMAGES } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "How it works",
   description:
-    "Discover how Bar Beats Bingo works, what makes it a crowd favourite, and how to bring music video bingo to your venue.",
+    "How Bar Beats Bingo quick fire games work: four short games per pack, 25-second song clips, one way to win per game and an optional Blackout.",
 };
-
-const PRIZE_TIERS = ["1 line", "2 or 3 lines", "The cross (forming an X)", "Blackout (all 5 lines)"];
 
 const STEPS = [
   {
-    title: "Print and hand out scorecards",
-    body: <p>Grab your scorecards and markers, and hand them out to your customers.</p>,
+    title: "Hand out scorecards",
+    body: (
+      <p>
+        Print the scorecards. Each A4 sheet holds two A5 cards, so cut them down the middle. Every card is different,
+        so luck plays a part. Hand out one per player or pair, with a pen or marker.
+      </p>
+    ),
     image: IMAGES.step1,
     alt: "A bingo scorecard coming out of a printer",
   },
   {
-    title: "Press play",
+    title: "Name the way to win, then press play",
     body: (
       <p>
-        Choose your game format, <strong>audio</strong> or <strong>video</strong>. Click play on your computer and let
-        the music roll.
+        Choose your game, <strong>audio</strong> or <strong>video</strong>, and tell the room the winning pattern, like{" "}
+        <strong>1 line</strong> or <strong>the Cross</strong>, and whether you&apos;re playing on to Blackout. Then press
+        play and sing along. It&apos;s half the fun.
       </p>
     ),
     image: IMAGES.step2,
     alt: "A laptop showing the Bar Beats Bingo logo",
   },
   {
-    title: "Check off songs",
+    title: "Cross off the songs",
     body: (
-      <>
-        <p>
-          Each scorecard has a list of songs. When players hear one play, they cross it off with their marker. Winning
-          patterns:
-        </p>
-        <ul>
-          {PRIZE_TIERS.map((t) => (
-            <li key={t}>{t}</li>
-          ))}
-        </ul>
-      </>
+      <p>
+        Each song plays for 25 seconds. When players hear a song that&apos;s on their card, they cross it off. Games move
+        fast: a quick fire game runs 15 to 25 minutes.
+      </p>
     ),
     image: IMAGES.step3,
     alt: "Players marking songs off their scorecards",
   },
   {
-    title: "Check the card when they yell BINGO!",
+    title: "Someone yells BINGO!",
     body: (
       <p>
-        Pause the game, check their card against the song sheet provided and hand out a prize. You choose the prizes.
+        Pause the game and check their card against your track listing. Read their songs out on the microphone so the
+        whole room is in on it. If the card checks out, hand over the prize.
       </p>
     ),
     image: IMAGES.step4,
     alt: "A marked bingo card being checked",
   },
   {
-    title: "Decide the prizes",
+    title: "End it there, or play on",
     body: (
       <>
-        <p>Get creative with your prizes. Common prize tiers are:</p>
-        <ul>
-          {PRIZE_TIERS.map((t) => (
-            <li key={t}>{t}</li>
-          ))}
-        </ul>
         <p>
-          For prize-giving ideas, see our <Link href="/faq-tips">FAQ and tips</Link>.
+          Finish at the first prize, or press play again and carry on to <strong>Blackout</strong> for a second prize.
+          You choose the prizes. Keep it simple or go big: the reveal matters more than the value.
+        </p>
+        <p>
+          Need inspiration? See our <Link href="/faq-tips#prizes">prize ideas</Link>.
         </p>
       </>
     ),
@@ -78,8 +75,14 @@ const STEPS = [
     alt: "Prizes ready for the winners",
   },
   {
-    title: "Want to keep playing?",
-    body: <p>Pick one of our themed shows or another mixed game and keep the party going.</p>,
+    title: "Take a break, then the next game",
+    body: (
+      <p>
+        Every game pack has four quick fire games. Between games, give people time to order food and drinks, and run a{" "}
+        <Link href="/faq-tips#crowd-game">crowd game</Link> for a bonus prize. Start the next game when everyone&apos;s
+        set.
+      </p>
+    ),
     image: IMAGES.step6,
     alt: "A crowd enjoying a bingo night",
   },
@@ -90,11 +93,26 @@ export default function HowItWorksPage() {
     <>
       <PageIntro title="How does Bar Beats Bingo work?">
         <p>
-          It&apos;s <strong>simple</strong>: just like regular bingo, but with awesome tunes.
+          It&apos;s just like regular bingo, but with <strong>great tunes</strong> instead of numbers. Quick fire games are
+          short, fast and easy to fit into any night.
         </p>
       </PageIntro>
 
-      <ol className="wrap mt-12 space-y-20 md:space-y-28">
+      <div className="wrap mt-10">
+        <QuickFireGlance />
+      </div>
+
+      <section id="patterns" className="wrap mt-16 scroll-mt-6" aria-labelledby="patterns-heading">
+        <h2 id="patterns-heading" className="text-[clamp(1.9rem,3.6vw,2.7rem)]">
+          Winning patterns
+        </h2>
+        <p className="mt-3 max-w-2xl text-lg text-white/90">
+          Each quick fire game has one fast way of winning, then the option to play on to Blackout.
+        </p>
+        <WinningPatterns className="mt-8" />
+      </section>
+
+      <ol className="wrap mt-20 space-y-20 md:space-y-28" aria-label="How a game runs">
         {STEPS.map((step, i) => (
           <li key={step.title} className="grid items-center gap-8 md:grid-cols-2 md:gap-14">
             <Photo
@@ -109,11 +127,37 @@ export default function HowItWorksPage() {
                 {i + 1}
               </span>
               <h2 className="mt-5 text-[clamp(1.9rem,3.6vw,2.7rem)]">{step.title}</h2>
-              <div className="copy mt-4 text-lg">{step.body}</div>
+              <div className="copy mt-4 space-y-3 text-lg">{step.body}</div>
             </div>
           </li>
         ))}
       </ol>
+
+      <section className="wrap mt-24" aria-labelledby="need-heading">
+        <div className="panel p-6 sm:p-10">
+          <h2 id="need-heading" className="text-[clamp(1.9rem,3.6vw,2.7rem)]">
+            What you need
+          </h2>
+          <div className="mt-6">
+            <WhatYouNeed />
+          </div>
+          <p className="mt-6 text-mist">
+            Running it on the night? See the step-by-step host guides for{" "}
+            <Link href="/host-instructions-orange-door-customers" className="text-white underline underline-offset-4">
+              Orange Door
+            </Link>
+            ,{" "}
+            <Link href="/host-instructions-video-game" className="text-white underline underline-offset-4">
+              the video game
+            </Link>{" "}
+            and{" "}
+            <Link href="/host-instructions-audio-game" className="text-white underline underline-offset-4">
+              the audio game
+            </Link>
+            .
+          </p>
+        </div>
+      </section>
 
       <CallToAction />
     </>

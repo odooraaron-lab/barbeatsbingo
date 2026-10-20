@@ -1,14 +1,25 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Plus } from "lucide-react";
 import { PageIntro } from "@/components/site/page-intro";
 import { Photo } from "@/components/site/photo";
 import { CallToAction } from "@/components/site/call-to-action";
+import { CrowdPrompts } from "@/components/site/quick-fire";
 import { IMAGES } from "@/lib/site";
+import {
+  CROWD_GAME_STEPS,
+  PRIZE_IDEAS,
+  PRIZES,
+  SITUATIONS,
+  TIPS_BEFORE,
+  TIPS_DURING,
+  WELCOME,
+} from "@/lib/quick-fire";
 
 export const metadata: Metadata = {
   title: "FAQ & tips",
   description:
-    "Answers to common questions about running Bar Beats Bingo, plus tips for a great night at your venue or fundraiser.",
+    "Answers to common questions about running Bar Beats Bingo quick fire games, plus host tips, prize ideas and the crowd game for between games.",
 };
 
 const FAQS: { q: string; a: React.ReactNode }[] = [
@@ -25,8 +36,43 @@ const FAQS: { q: string; a: React.ReactNode }[] = [
     q: "Do I need to know a lot about music to host a show?",
     a: (
       <p>
-        Not at all. It&apos;s just like bingo but with great tunes instead of boring numbers. Weekly host sheets tell
-        your host which songs are playing and when.
+        Not at all. It&apos;s just like bingo but with great tunes instead of numbers. Your track listing tells you which
+        songs are playing and when.
+      </p>
+    ),
+  },
+  {
+    q: "How many games do I get?",
+    a: (
+      <p>
+        Four quick fire games in every game pack. Run one, or run all four in a night.
+      </p>
+    ),
+  },
+  {
+    q: "How long does a quick fire game run?",
+    a: (
+      <p>
+        Between <strong>15 and 25 minutes</strong>. Each song clip is 25 seconds long, so games move fast.
+      </p>
+    ),
+  },
+  {
+    q: "How does a game get won?",
+    a: (
+      <p>
+        Each game has one fast way of winning, such as <strong>1 line</strong> or <strong>the Cross</strong>. Tell the
+        room before you press play. The first to get it wins that game&apos;s prize, then you can end the game there or
+        play on to <strong>Blackout</strong> for a second prize. See the{" "}
+        <Link href="/more-information#patterns">winning patterns</Link>.
+      </p>
+    ),
+  },
+  {
+    q: "How long should the breaks be?",
+    a: (
+      <p>
+        Long enough for people to order food and drinks and play a <a href="#crowd-game">crowd game</a>.
       </p>
     ),
   },
@@ -35,43 +81,8 @@ const FAQS: { q: string; a: React.ReactNode }[] = [
     a: (
       <p>
         Very little. You need a laptop or Orange Door system connected to speakers (and TVs if you&apos;re running the
-        video show), some pens or markers, prizes for your winners, and a big smile.
-      </p>
-    ),
-  },
-  {
-    q: "Can I run Bar Beats Bingo as a fundraiser?",
-    a: (
-      <p>
-        Absolutely. It&apos;s easy to run, fun for guests and great for getting people involved. Contact us to ask about
-        any fundraiser discounts or offers we have available.
-      </p>
-    ),
-  },
-  {
-    q: "How long does the game run?",
-    a: (
-      <p>
-        Each round is about <strong>15 minutes</strong>. There are <strong>5 rounds per game</strong>, so about{" "}
-        <strong>1.5 hours of entertainment</strong>.
-      </p>
-    ),
-  },
-  {
-    q: "Can we charge customers to play?",
-    a: (
-      <p>
-        Yes, that&apos;s completely up to you. If you plan to charge for cards, check the gambling laws in your area
-        first.
-      </p>
-    ),
-  },
-  {
-    q: "Can I give out prizes for winning?",
-    a: (
-      <p>
-        Definitely, prizes are part of the fun. Keep it simple with lollies, vouchers or bar tabs, or go big with
-        something like a lawnmower.
+        video version), printed scorecards and the track listing, some pens or markers, prizes for your winners, a
+        microphone and a big smile.
       </p>
     ),
   },
@@ -80,19 +91,49 @@ const FAQS: { q: string; a: React.ReactNode }[] = [
     a: (
       <>
         <p>
-          Scorecards and player answer sheets are available <strong>at the start of each week</strong>. Log in to your
-          customer portal to download them along with the game files.
+          Each game pack has four quick fire games as video or audio files, plus the scorecards and the track listing.
+          Log in to your customer portal to download them, along with the full host guide.
         </p>
         <p>Orange Door customers can also load games straight onto their system with the game downloader.</p>
       </>
     ),
   },
   {
-    q: "Can I control the game from my smartphone?",
+    q: "Can I control the game from my phone?",
     a: (
       <p>
-        Yes, if you have an Orange Door system you can control the game from your smartphone or web browser. Without one,
-        you can play the game from your own laptop.
+        Yes, if you have an Orange Door system. Pause, check the card and resume from the Remote app or a web browser.
+        Without one, run the game from your own laptop.
+      </p>
+    ),
+  },
+  {
+    q: "Can players use Shazam?",
+    a: <p>The host decides. Say your rule in the welcome so everyone knows.</p>,
+  },
+  {
+    q: "Can I give out prizes for winning?",
+    a: (
+      <p>
+        Definitely, prizes are part of the fun. Keep it simple with lollies, vouchers or bar tabs, or go big with
+        something like a lawnmower. See our <a href="#prizes">prize ideas</a>.
+      </p>
+    ),
+  },
+  {
+    q: "Can we charge customers to play?",
+    a: (
+      <p>
+        Yes, that&apos;s up to you. If you plan to charge for cards, check the gambling laws in your area first.
+      </p>
+    ),
+  },
+  {
+    q: "Can I run it as a fundraiser?",
+    a: (
+      <p>
+        Absolutely. It&apos;s easy to run, fun for guests and great for getting people involved. Ask us about fundraiser
+        offers and one-off game packs for events. More on our <Link href="/fundraising-events">fundraising page</Link>.
       </p>
     ),
   },
@@ -100,28 +141,55 @@ const FAQS: { q: string; a: React.ReactNode }[] = [
     q: "How should we advertise our event?",
     a: (
       <p>
-        Give yourself at least four weeks to promote your event and build interest. We have high-resolution images for
-        your social media pages in the customer portal.
+        Start promoting at least four weeks out. We have high resolution images ready for your social media pages: just{" "}
+        <Link href="/contact-us">ask us</Link>. Posting a photo of the winners after each game night is a nice touch, but
+        completely optional.
       </p>
     ),
   },
 ];
 
-const TIPS = [
-  "Encourage your host to offer clues if teams are stuck. It's all about having fun.",
-  "Be interactive: walk around, chat with teams and get everyone involved.",
-  "Don't forget the sing-alongs. They're half the fun!",
-  "Pre-load your videos in a playlist so they play seamlessly, or start each round manually when your audience is ready.",
+const JUMPS = [
+  { href: "#questions", label: "Questions" },
+  { href: "#hosting", label: "Hosting tips" },
+  { href: "#prizes", label: "Prize ideas" },
+  { href: "#crowd-game", label: "The crowd game" },
 ];
+
+function Bullets({ items }: { items: string[] }) {
+  return (
+    <ul className="space-y-3">
+      {items.map((t) => (
+        <li key={t} className="flex gap-3 text-white/90">
+          <span aria-hidden className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-red" />
+          {t}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export default function FaqPage() {
   return (
     <>
-      <PageIntro title="Questions and answers">
-        <p>Curious about how Bar Beats Bingo works? Here are the questions we get asked most.</p>
+      <PageIntro title="FAQ and tips">
+        <p>The questions we get asked most, plus everything you need to host a great quick fire night.</p>
       </PageIntro>
 
-      <div className="wrap mt-10 grid items-start gap-12 lg:grid-cols-[1.25fr_1fr]">
+      <nav aria-label="On this page" className="wrap mt-2 flex flex-wrap justify-center gap-2">
+        {JUMPS.map((j) => (
+          <a
+            key={j.href}
+            href={j.href}
+            className="rounded-full border border-line px-4 py-1.5 text-sm font-semibold text-mist transition-colors hover:border-white/30 hover:text-white"
+          >
+            {j.label}
+          </a>
+        ))}
+      </nav>
+
+      {/* Questions */}
+      <section id="questions" aria-label="Questions" className="wrap mt-10 grid scroll-mt-6 items-start gap-12 lg:grid-cols-[1.25fr_1fr]">
         <div className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-coal">
           {FAQS.map((item, i) => (
             <details key={item.q} name="faq" open={i === 0} className="group">
@@ -144,20 +212,149 @@ export default function FaqPage() {
           height={520}
           className="mx-auto hidden w-full max-w-md rounded-full lg:sticky lg:top-8 lg:block"
         />
-      </div>
+      </section>
 
-      <section className="wrap mt-24">
-        <div className="panel mx-auto max-w-3xl p-8 sm:p-10">
-          <h2 className="text-[clamp(1.9rem,4vw,2.6rem)]">Tips for a great night</h2>
-          <ul className="mt-6 space-y-4">
-            {TIPS.map((tip) => (
-              <li key={tip} className="flex gap-4 text-lg text-white/90">
-                <span aria-hidden className="mt-2.5 h-3 w-3 shrink-0 rounded-full bg-red" />
-                {tip}
-              </li>
-            ))}
-          </ul>
+      {/* Hosting */}
+      <section id="hosting" aria-labelledby="hosting-heading" className="wrap mt-24 scroll-mt-6">
+        <h2 id="hosting-heading" className="text-[clamp(2rem,5vw,3rem)]">
+          Tips for a great night
+        </h2>
+        <p className="mt-3 max-w-2xl text-lg text-white/90">
+          The game runs itself. Your job is the atmosphere. Relaxed, friendly and a bit cheeky beats polished every
+          time.
+        </p>
+        <div className="mt-8 grid gap-4 md:grid-cols-2">
+          <div className="panel p-6 sm:p-8">
+            <h3 className="font-sans text-xl font-bold">Before the doors open</h3>
+            <div className="mt-4">
+              <Bullets items={TIPS_BEFORE} />
+            </div>
+          </div>
+          <div className="panel p-6 sm:p-8">
+            <h3 className="font-sans text-xl font-bold">While you play</h3>
+            <div className="mt-4">
+              <Bullets items={TIPS_DURING} />
+            </div>
+          </div>
         </div>
+
+        <figure className="mt-4 rounded-2xl border border-sun/30 bg-sun/[0.07] p-6 sm:p-8">
+          <figcaption className="font-sans text-sm font-bold text-sun">A welcome you can borrow</figcaption>
+          <blockquote className="mt-3 text-lg leading-relaxed text-white/90 sm:text-xl">&ldquo;{WELCOME}&rdquo;</blockquote>
+        </figure>
+
+        <div className="panel mt-4 p-6 sm:p-8">
+          <h3 className="font-sans text-xl font-bold">When things get interesting</h3>
+          <dl className="mt-4 divide-y divide-line">
+            {SITUATIONS.map((s) => (
+              <div key={s.what} className="grid gap-1 py-3.5 sm:grid-cols-[14rem_1fr] sm:gap-6">
+                <dt className="font-semibold">{s.what}</dt>
+                <dd className="text-white/85">{s.todo}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+
+        <p className="mt-4 rounded-2xl border border-line px-6 py-5 text-white/90">
+          <strong className="text-white">Keep the music going.</strong> Before the first game, between games and after
+          the show, keep music playing. A silent room loses its energy fast, and the night should feel like a party from
+          the moment people walk in.
+        </p>
+      </section>
+
+      {/* Prizes */}
+      <section id="prizes" aria-labelledby="prizes-heading" className="wrap mt-24 scroll-mt-6">
+        <h2 id="prizes-heading" className="text-[clamp(2rem,5vw,3rem)]">
+          Prizes that get a reaction
+        </h2>
+        <p className="mt-3 max-w-2xl text-lg text-white/90">
+          Quick fire prizes are given out per game. Keep it simple or go big. The reveal matters more than the value.
+        </p>
+        <div className="panel mt-8 overflow-x-auto p-2 sm:p-4">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Prize</th>
+                <th>When</th>
+                <th>Ideas</th>
+              </tr>
+            </thead>
+            <tbody>
+              {PRIZES.map((p) => (
+                <tr key={p.prize}>
+                  <td className="font-semibold whitespace-nowrap">{p.prize}</td>
+                  <td className="text-mist">{p.when}</td>
+                  <td>{p.ideas}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-sun/30 bg-sun/[0.07] p-6 sm:p-8">
+            <h3 className="font-sans text-xl font-bold">How many prizes for a four game night?</h3>
+            <p className="mt-2 text-white/90">
+              At least four, one per game. Add one more for every game you play on to Blackout, and a bonus prize for
+              each crowd game you run.
+            </p>
+          </div>
+          <div className="panel p-6 sm:p-8">
+            <h3 className="font-sans text-xl font-bold">The mystery prize board</h3>
+            <p className="mt-2 text-white/90">
+              Put removable cards on a board, showing celebrity faces, bands, musical notes or another theme your venue
+              likes, with a prize written on the back of each. The winner picks a card and you reveal the prize. Mix a
+              few small, funny prizes in with the bigger ones so every reveal gets a reaction.
+            </p>
+          </div>
+        </div>
+
+        <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {PRIZE_IDEAS.map((p) => (
+            <li key={p.title} className="panel p-6">
+              <h3 className="font-sans text-lg font-bold text-sun">{p.title}</h3>
+              <p className="mt-1.5 text-white/90">{p.body}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* Crowd game */}
+      <section id="crowd-game" aria-labelledby="crowd-heading" className="wrap mt-24 scroll-mt-6">
+        <h2 id="crowd-heading" className="text-[clamp(2rem,5vw,3rem)]">
+          The crowd game
+        </h2>
+        <p className="mt-3 max-w-2xl text-lg text-white/90">
+          One simple crowd game fills the break between quick fire games, keeps people in their seats and gives you a
+          bonus winner.
+        </p>
+        <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {CROWD_GAME_STEPS.map((step, i) => (
+            <li key={step.title} className="panel p-5">
+              <span className="display grid h-10 w-8 place-items-center rounded-full bg-sun text-lg text-[#1b1b1b]" aria-hidden>
+                {i + 1}
+              </span>
+              <h3 className="mt-3 font-sans text-lg font-bold">
+                <span className="sr-only">Step {i + 1}: </span>
+                {step.title}
+              </h3>
+              <p className="mt-1 text-white/85">{step.body}</p>
+            </li>
+          ))}
+        </ol>
+
+        <h3 className="mt-12 font-sans text-xl font-bold">A few prompts to try</h3>
+        <p className="mt-1 text-mist">Read the prompt, then the examples. The examples are what make the answers funny.</p>
+        <div className="mt-5">
+          <CrowdPrompts />
+        </div>
+        <p className="mt-5 text-white/90">
+          Customers get the full set of 35 prompts in the host guide in the{" "}
+          <Link href="/portal" className="font-semibold text-sun underline underline-offset-4">
+            customer portal
+          </Link>
+          : a family-friendly set for any crowd, and an after-dark set for adults-only nights.
+        </p>
       </section>
 
       <CallToAction />

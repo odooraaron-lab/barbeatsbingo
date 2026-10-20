@@ -6,7 +6,7 @@ import { IMAGES } from "@/lib/site";
 export const metadata: Metadata = {
   title: "Fundraising & events",
   description:
-    "Host an unforgettable fundraiser or special event with Bar Beats Bingo, an energetic music game that brings people together and raises money.",
+    "Host an unforgettable fundraiser or special event with Bar Beats Bingo quick fire games, an energetic music game that brings people together and raises money.",
 };
 
 export default function FundraisingPage() {
@@ -41,13 +41,18 @@ export default function FundraisingPage() {
             favourite tunes.
           </p>
           <p>
-            We can supply a one-off music bingo game pack tailored to your event. It&apos;s easy to run, loads of fun and
-            guaranteed to have your guests laughing, singing and maybe even dancing in their seats.
+            We can supply a one-off game pack for your event: four quick fire games of 15 to 25 minutes each, every one
+            with its own prize, so there are plenty of chances to win. It&apos;s easy to run, loads of fun and guaranteed
+            to have your guests laughing, singing and maybe even dancing in their seats.
           </p>
           <p>
             For charity events, members of the community often donate prizes to the cause. From a bottle of wine to a
             designer scarf or a local experience, it&apos;s always a buzz seeing what people give. Half the fun is in the
             surprise.
+          </p>
+          <p>
+            Between games, run a <Link href="/faq-tips#crowd-game">crowd game</Link> for a bonus prize, and try a{" "}
+            <Link href="/faq-tips#prizes">mystery prize board</Link> to make every win a moment.
           </p>
         </div>
 
@@ -61,6 +66,7 @@ export default function FundraisingPage() {
             <li>Donate the proceeds to a charity of your choice</li>
           </ul>
           <p className="mt-5">It&apos;s fun, easy to run and creates a great community atmosphere.</p>
+          <p className="mt-3 text-sm">Charging to play? Check the gambling laws in your area first.</p>
           <p className="mt-5 font-bold">No experience needed: just press play and let the fun begin.</p>
           <Link href="/contact-us" className="btn mt-7 bg-[#1b1b1b] text-white hover:bg-black">
             Plan your event with us

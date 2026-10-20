@@ -6,7 +6,7 @@ import type { ActivityKind } from "@/db/schema";
 /** The timeline's filters, and which kinds of event each shows. */
 export const ACTIVITY_FILTERS = {
   all: { label: "Everything", kinds: null },
-  downloads: { label: "Downloads", kinds: ["downloaded"] },
+  downloads: { label: "Downloads", kinds: ["downloaded", "guide_downloaded"] },
   shows: { label: "Shows opened and played", kinds: ["show_viewed", "show_played"] },
   searches: { label: "Searches and requests", kinds: ["searched", "category_requested"] },
   account: {

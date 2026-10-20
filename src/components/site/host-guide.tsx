@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { HOST_GUIDES, SITE } from "@/lib/site";
+import { NightAtAGlance, WhatYouNeed } from "./quick-fire";
 
 export type GuideStep = { title: string; body: React.ReactNode };
 
@@ -36,7 +37,34 @@ export function HostGuide({
           ))}
         </ol>
 
-        <div className="alert alert-info mt-10 text-base">{closing}</div>
+        <section aria-labelledby="need-heading" className="panel mt-10 p-6 sm:p-7">
+          <h2 id="need-heading" className="text-[1.6rem] leading-tight">
+            What you need
+          </h2>
+          <div className="mt-4">
+            <WhatYouNeed />
+          </div>
+        </section>
+
+        <section aria-labelledby="glance-heading" className="panel mt-5 p-6 sm:p-7">
+          <h2 id="glance-heading" className="text-[1.6rem] leading-tight">
+            The night in one glance
+          </h2>
+          <div className="mt-5">
+            <NightAtAGlance />
+          </div>
+        </section>
+
+        <p className="mt-5 rounded-2xl border border-sun/30 bg-sun/[0.07] px-6 py-5 text-white/90">
+          <strong className="text-white">Customers:</strong> the full Quick Fire host guide, with prize ideas and 35 crowd
+          game prompts, is in your{" "}
+          <Link href="/portal" className="font-semibold text-sun underline underline-offset-4">
+            customer portal
+          </Link>
+          , ready to print.
+        </p>
+
+        <div className="alert alert-info mt-5 text-base">{closing}</div>
       </article>
 
       <aside className="lg:pt-24">
