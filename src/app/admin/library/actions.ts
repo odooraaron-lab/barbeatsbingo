@@ -6,6 +6,7 @@ import { and, count, eq, isNotNull, max } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { categories, files, playlists, type Difficulty } from "@/db/schema";
+import { warmShowCovers } from "@/lib/album-art";
 import { requireAdmin } from "@/lib/auth";
 import { directDownloadUrl, linkProblem, slugify } from "@/lib/format";
 import { checkLink } from "@/lib/links";
@@ -182,6 +183,7 @@ export async function saveShowFiles(playlistId: string, _prev: ActionResult, fd:
   });
   if (result.error) return fail(result.error);
 
+  warmShowCovers(playlistId);
   refresh();
   return ok("Show files saved.", result.warnings.length ? result.warnings.join("\n") : undefined);
 }

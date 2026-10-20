@@ -235,3 +235,17 @@ export type Playlist = typeof playlists.$inferSelect;
 export type LibraryFile = typeof files.$inferSelect;
 export type FileKind = (typeof fileKind.enumValues)[number];
 export type Difficulty = (typeof showDifficulty.enumValues)[number];
+
+/**
+ * Album covers for songs on call lists, looked up once from a music catalogue and kept.
+ * `imageUrl` is null when no confident match was found (so it isn't looked up again).
+ */
+export const songArt = pgTable("song_art", {
+  // Artist and title, lower-cased and simplified, e.g. "prince|little red corvette".
+  key: text("key").primaryKey(),
+  artist: text("artist").notNull(),
+  title: text("title").notNull(),
+  imageUrl: text("image_url"),
+  source: text("source"),
+  lookedUpAt: timestamp("looked_up_at", { withTimezone: true }).notNull().defaultNow(),
+});

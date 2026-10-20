@@ -50,6 +50,13 @@
       "when": 1792458230176,
       "tag": "0006_show_difficulty",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792461235667,
+      "tag": "0007_album_art",
+      "breakpoints": true
     }
   ]
 }

@@ -4,18 +4,46 @@ import { requireUser, accessHasExpired } from "@/lib/auth";
 import { listGenres, type GenreSummary } from "@/lib/library";
 import { InstallApp } from "@/components/portal/install-app";
 import { genreGlow } from "@/lib/genre-colours";
+import { categoryCovers, type Cover } from "@/lib/album-art";
 
 const showCount = (n: number) => (n === 1 ? "1 show" : `${n} shows`);
 
-function OpenCategory({ c }: { c: GenreSummary }) {
+/** A strip of small album covers from the songs in a category (up to 20, ten to a row). */
+function CoverStrip({ covers }: { covers: Cover[] }) {
+  if (!covers.length) return null;
+  return (
+    <span aria-hidden className="relative grid grid-cols-10 gap-1 pt-4">
+      {covers.map((c) => (
+        // Tiny thumbnails from the music catalogue's own image server; no resizing needed.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={c.url}
+          src={c.url}
+          alt=""
+          title={c.label}
+          width={56}
+          height={56}
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          className="aspect-square w-full rounded-[3px] bg-ink object-cover opacity-80 ring-1 ring-white/10 transition-opacity group-hover:opacity-100"
+        />
+      ))}
+    </span>
+  );
+}
+
+function OpenCategory({ c, covers }: { c: GenreSummary; covers: Cover[] }) {
   return (
     <Link
       href={`/portal/${c.slug}`}
       style={genreGlow(c.slug)}
-      className="genre-card group relative flex h-full items-center gap-4 overflow-hidden rounded-2xl p-5"
+      className="genre-card group relative flex h-full flex-col overflow-hidden rounded-2xl p-5"
     >
       {/* The glow (each category in its own colour) is what marks it as ready to play. */}
       <span aria-hidden className="genre-card-wash pointer-events-none absolute inset-0" />
+      {/* Takes the spare height (when a card beside it is taller), keeping the name centred. */}
+      <span className="relative flex flex-1 items-center gap-4">
       <span aria-hidden className="genre-card-disc relative grid h-12 w-12 shrink-0 place-items-center rounded-full">
         <Play size={20} className="translate-x-px" fill="currentColor" />
       </span>
@@ -31,6 +59,8 @@ function OpenCategory({ c }: { c: GenreSummary }) {
         </span>
       </span>
       <ChevronRight size={22} aria-hidden className="relative shrink-0 text-mist transition-colors group-hover:text-white" />
+      </span>
+      <CoverStrip covers={covers} />
     </Link>
   );
 }
@@ -83,6 +113,7 @@ export default async function PortalHomePage() {
   const anyLocked = others.some((c) => c.state === "locked");
   const firstName = user.name.trim().split(/\s+/)[0];
   const expired = accessHasExpired(user);
+  const covers = await categoryCovers(open.map((c) => c.id));
 
   return (
     <>
@@ -123,7 +154,7 @@ export default async function PortalHomePage() {
           <ul className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {open.map((c) => (
               <li key={c.id} className="min-w-0">
-                <OpenCategory c={c} />
+                <OpenCategory c={c} covers={covers.get(c.id) ?? []} />
               </li>
             ))}
           </ul>

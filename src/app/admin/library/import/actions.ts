@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/auth";
 import { linkProblem } from "@/lib/format";
 import { applyShowLinks, findCategory, findOrCreateShow } from "@/lib/library-admin";
 import { SHOW_SLOTS } from "@/lib/show-files";
+import { warmShowCovers } from "@/lib/album-art";
 
 const link = z.string().trim().max(2000).optional();
 const rowSchema = z.object({
@@ -90,6 +91,7 @@ export async function importShows(rowsInput: unknown, optionsInput: unknown): Pr
     busy.add(item.show.id);
     try {
       const outcome = await applyShowLinks(item.show, { links: item.links, removeEmpty: false });
+      if (!outcome.error && item.links.tracklist) warmShowCovers(item.show.id);
       results.push({
         line: item.line,
         status: outcome.error ? "error" : item.created ? "created" : "updated",
