@@ -53,7 +53,8 @@ export const users = pgTable("users", {
   // Whether they may play shows on the site (player, call list, bingo checker). Admins always can.
   canPlay: boolean("can_play").notNull().default(true),
   // Their own choice on show pages: the player and checker shown, or just the downloads.
-  playMode: boolean("play_mode").notNull().default(true),
+  // Off for new customers (they switch it on from a show page); existing ones keep theirs.
+  playMode: boolean("play_mode").notNull().default(false),
   notes: text("notes").notNull().default(""),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
   ...timestamps,

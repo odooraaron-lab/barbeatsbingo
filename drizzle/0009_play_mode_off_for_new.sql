@@ -1,0 +1,1 @@
+ALTER TABLE "users" ALTER COLUMN "play_mode" SET DEFAULT false;
