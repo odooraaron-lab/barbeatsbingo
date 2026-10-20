@@ -8,6 +8,7 @@ import { categories, files, playlists } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { formatBytes } from "@/lib/format";
 import { ActionForm } from "@/components/admin/action-form";
+import { DifficultyTag } from "@/components/portal/difficulty-tag";
 import { Breadcrumbs } from "@/components/portal/breadcrumbs";
 import { createPlaylist, deleteCategory, updateCategory } from "../actions";
 
@@ -26,6 +27,7 @@ export default async function CategoryAdminPage({ params }: { params: Promise<{ 
       id: playlists.id,
       name: playlists.name,
       isPublished: playlists.isPublished,
+      difficulty: playlists.difficulty,
       sortOrder: playlists.sortOrder,
       files: sql<number>`count(${files.id})::int`,
       bytes: sql<number>`coalesce(sum(${files.sizeBytes}), 0)::float8`,
@@ -69,6 +71,7 @@ export default async function CategoryAdminPage({ params }: { params: Promise<{ 
                         <Link href={`/admin/library/playlist/${p.id}`} className="font-semibold hover:underline">
                           {p.name}
                         </Link>
+                        <DifficultyTag value={p.difficulty} className="ml-2" />
                         {!p.isPublished && <span className="tag ml-2">Hidden</span>}
                       </td>
                       <td className="text-mist">

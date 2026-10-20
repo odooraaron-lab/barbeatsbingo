@@ -7,6 +7,7 @@ import { formatBytes, kindLabel } from "@/lib/format";
 import { Breadcrumbs } from "@/components/portal/breadcrumbs";
 import { FileIcon } from "@/components/portal/file-icon";
 import { DownloadedTag } from "@/components/portal/download-marks";
+import { DifficultyTag } from "@/components/portal/difficulty-tag";
 
 export const metadata: Metadata = { title: "Search" };
 
@@ -48,6 +49,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
                     <Link href={`/portal/${p.categorySlug}/${p.slug}`} className="block px-5 py-4 hover:bg-white/[0.03]">
                       <span className="flex flex-wrap items-center gap-2 font-semibold">
                         {p.name}
+                        <DifficultyTag value={p.difficulty} />
                         {done.has(p.id) && <DownloadedTag at={done.get(p.id)!.toISOString()} />}
                       </span>
                       <span className="text-sm text-mist">{p.categoryName}</span>

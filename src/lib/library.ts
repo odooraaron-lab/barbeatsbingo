@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq, ilike, inArray, max, ne, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
-import { accessGrants, categories, downloads, files, playlists, type FileKind } from "@/db/schema";
+import { accessGrants, categories, downloads, files, playlists, type Difficulty, type FileKind } from "@/db/schema";
 import { accessHasExpired } from "./auth";
 import type { SessionUser } from "./session";
 
@@ -96,6 +96,7 @@ export type PlaylistSummary = {
   name: string;
   description: string;
   isPublished: boolean;
+  difficulty: Difficulty | null;
   fileCount: number;
   totalBytes: number;
   updatedAt: Date | null;
@@ -123,6 +124,7 @@ export async function getGenre(user: SessionUser, slug: string) {
       name: playlists.name,
       description: playlists.description,
       isPublished: playlists.isPublished,
+      difficulty: playlists.difficulty,
       fileCount: sql<number>`count(${files.id}) filter (where ${files.kind} <> 'preview')::int`,
       totalBytes: sql<number>`coalesce(sum(${files.sizeBytes}) filter (where ${files.kind} <> 'preview'), 0)::float8`,
       updatedAt: max(files.createdAt),
@@ -235,6 +237,7 @@ export async function searchLibrary(user: SessionUser, query: string) {
         id: playlists.id,
         name: playlists.name,
         slug: playlists.slug,
+        difficulty: playlists.difficulty,
         categoryName: categories.name,
         categorySlug: categories.slug,
       })

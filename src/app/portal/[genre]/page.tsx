@@ -7,6 +7,7 @@ import { formatBytes, formatDate } from "@/lib/format";
 import { Breadcrumbs } from "@/components/portal/breadcrumbs";
 import { RequestCategory } from "@/components/portal/request-category";
 import { DownloadedTag } from "@/components/portal/download-marks";
+import { DifficultyTag } from "@/components/portal/difficulty-tag";
 
 const TEASER = 12;
 
@@ -91,6 +92,7 @@ export default async function GenrePage({ params }: { params: Promise<{ genre: s
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-3">
                     <span className="truncate text-xl font-bold">{p.name}</span>
+                    <DifficultyTag value={p.difficulty} />
                     {!p.isPublished && <span className="tag">Hidden</span>}
                     {done.has(p.id) && <DownloadedTag at={done.get(p.id)!.toISOString()} className="max-sm:hidden" />}
                   </span>

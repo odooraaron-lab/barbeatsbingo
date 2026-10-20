@@ -116,12 +116,15 @@ export function ImportTool({ existing }: { existing: Record<string, string[]> })
           {IMPORT_COLUMNS.map((c) => (
             <li key={c.field} className="rounded-full border border-line px-3 py-1 text-mist">
               {c.heading}
-              {(c.field === "description" || c.field === "visible") && <span className="text-fog"> (optional)</span>}
+              {(c.field === "description" || c.field === "visible" || c.field === "difficulty") && (
+                <span className="text-fog"> (optional)</span>
+              )}
             </li>
           ))}
         </ul>
         <p className="mt-3 text-sm text-fog">
           Visible: yes or no. Blank keeps an existing show as it is; new shows follow the option below.
+          Difficulty: Easy, Medium or Hard. Blank leaves it as it is.
         </p>
         <button type="button" onClick={downloadTemplate} className="btn btn-ghost mt-5">
           <Download size={18} aria-hidden /> Download the template (CSV)

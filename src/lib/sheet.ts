@@ -4,6 +4,7 @@
  */
 
 import type { SlotKey } from "./show-files";
+import type { Difficulty } from "@/db/schema";
 
 export type ImportRow = {
   /** Row number in the sheet, for messages. */
@@ -14,9 +15,11 @@ export type ImportRow = {
   description: string;
   /** True or false when the sheet says; null when it's left blank. */
   visible: boolean | null;
+  /** Easy, medium or hard when the sheet says; null when it's blank. */
+  difficulty: Difficulty | null;
 };
 
-type Field = "category" | "showName" | "description" | "visible" | `link:${SlotKey}`;
+type Field = "category" | "showName" | "description" | "visible" | "difficulty" | `link:${SlotKey}`;
 
 /** The columns, in the template's order, and the headings we recognise for each. */
 export const IMPORT_COLUMNS: { field: Field; heading: string; aliases: string[] }[] = [
@@ -44,6 +47,7 @@ export const IMPORT_COLUMNS: { field: Field; heading: string; aliases: string[] 
   },
   { field: "description", heading: "Description", aliases: ["description", "notes"] },
   { field: "visible", heading: "Visible", aliases: ["visible", "published", "showtocustomers", "live"] },
+  { field: "difficulty", heading: "Difficulty", aliases: ["difficulty", "hardness", "rating", "level", "howhard"] },
 ];
 
 export const TEMPLATE_CSV = IMPORT_COLUMNS.map((c) => c.heading).join(",") + "\r\n";
@@ -109,6 +113,14 @@ function parseVisible(value: string): boolean | null {
   return null;
 }
 
+function parseDifficulty(value: string): Difficulty | null {
+  const v = value.trim().toLowerCase();
+  if (["easy", "e", "1"].includes(v)) return "easy";
+  if (["medium", "med", "m", "2"].includes(v)) return "medium";
+  if (["hard", "h", "3"].includes(v)) return "hard";
+  return null;
+}
+
 export type ParsedSheet = { rows: ImportRow[]; hasHeader: boolean; unknownHeadings: string[] };
 
 /** Turns sheet text into import rows. Uses the heading row if there is one, else the template's column order. */
@@ -129,7 +141,7 @@ export function parseImportSheet(text: string): ParsedSheet {
 
   const rows: ImportRow[] = [];
   cells.slice(hasHeader ? 1 : 0).forEach((r, i) => {
-    const row: ImportRow = { line: i + (hasHeader ? 2 : 1), category: "", show: "", links: {}, description: "", visible: null };
+    const row: ImportRow = { line: i + (hasHeader ? 2 : 1), category: "", show: "", links: {}, description: "", visible: null, difficulty: null };
     r.forEach((value, col) => {
       const field = fields[col];
       if (!field || !value) return;
@@ -137,6 +149,7 @@ export function parseImportSheet(text: string): ParsedSheet {
       else if (field === "showName") row.show = value.slice(0, 120);
       else if (field === "description") row.description = value.slice(0, 500);
       else if (field === "visible") row.visible = parseVisible(value);
+      else if (field === "difficulty") row.difficulty = parseDifficulty(value);
       else row.links[field.slice(5) as SlotKey] = value.slice(0, 2000);
     });
     rows.push(row);

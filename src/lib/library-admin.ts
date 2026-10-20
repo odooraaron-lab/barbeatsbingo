@@ -1,7 +1,7 @@
 import "server-only";
 import { and, eq, max, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { categories, files, playlists, type FileKind } from "@/db/schema";
+import { categories, files, playlists, type Difficulty, type FileKind } from "@/db/schema";
 import { directDownloadUrl, guessKind, linkProblem, slugify, titleFromFileName } from "./format";
 import { checkLink, readCallList, type LinkCheck } from "./links";
 import { SHOW_SLOTS, filesBySlot, type SlotKey } from "./show-files";
@@ -71,6 +71,8 @@ export async function findOrCreateShow(
     isPublished?: boolean | null;
     /** Visibility for a new show when isPublished is null. */
     publishNew?: boolean;
+    /** Set how hard it is; null leaves it as it is. */
+    difficulty?: Difficulty | null;
   },
 ) {
   const slug = slugify(name);
@@ -88,6 +90,7 @@ export async function findOrCreateShow(
     const changes: Partial<typeof playlists.$inferInsert> = {};
     if (values.description) changes.description = values.description;
     if (values.isPublished != null) changes.isPublished = values.isPublished;
+    if (values.difficulty) changes.difficulty = values.difficulty;
     if (Object.keys(changes).length) await db.update(playlists).set(changes).where(eq(playlists.id, hit.id));
     return { show: { ...hit, ...changes }, created: false };
   }
@@ -102,6 +105,7 @@ export async function findOrCreateShow(
       name,
       slug: await uniquePlaylistSlug(categoryId, slug),
       description: values.description ?? "",
+      difficulty: values.difficulty ?? null,
       sortOrder: (top ?? 0) + 10,
       isPublished: values.isPublished ?? values.publishNew ?? false,
     })

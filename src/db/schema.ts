@@ -35,6 +35,8 @@ export const fileKind = pgEnum("file_kind", [
 ]);
 
 export const fileSource = pgEnum("file_source", ["storage", "link"]);
+/** How hard a show is to win, shown to customers next to its name. */
+export const showDifficulty = pgEnum("show_difficulty", ["easy", "medium", "hard"]);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -123,6 +125,8 @@ export const playlists = pgTable(
     description: text("description").notNull().default(""),
     sortOrder: integer("sort_order").notNull().default(0),
     isPublished: boolean("is_published").notNull().default(true),
+    // Not set until an admin picks one.
+    difficulty: showDifficulty("difficulty"),
     ...timestamps,
   },
   (t) => [uniqueIndex("playlists_category_slug_idx").on(t.categoryId, t.slug)],
@@ -230,3 +234,4 @@ export type Category = typeof categories.$inferSelect;
 export type Playlist = typeof playlists.$inferSelect;
 export type LibraryFile = typeof files.$inferSelect;
 export type FileKind = (typeof fileKind.enumValues)[number];
+export type Difficulty = (typeof showDifficulty.enumValues)[number];

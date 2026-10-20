@@ -5,7 +5,7 @@ import { refresh } from "next/cache";
 import { and, count, eq, isNotNull, max } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { categories, files, playlists } from "@/db/schema";
+import { categories, files, playlists, type Difficulty } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { directDownloadUrl, linkProblem, slugify } from "@/lib/format";
 import { checkLink } from "@/lib/links";
@@ -152,11 +152,21 @@ const kindOf = (fd: FormData) => {
  * Saves the three Zoho (or other) links every show has: the show file, the
  * scorecards and the track list. Empty boxes remove that file.
  */
+function parseDifficulty(value: string): Difficulty | null {
+  return value === "easy" || value === "medium" || value === "hard" ? value : null;
+}
+
 export async function saveShowFiles(playlistId: string, _prev: ActionResult, fd: FormData): Promise<ActionResult> {
   await requireAdmin();
   if (!uuid.safeParse(playlistId).success) return fail("Unknown show.");
   const [show] = await db.select().from(playlists).where(eq(playlists.id, playlistId)).limit(1);
   if (!show) return fail("Unknown show.");
+
+  // Saved first, so it sticks even if a link needs fixing.
+  const difficulty = parseDifficulty(String(fd.get("difficulty") ?? ""));
+  if (difficulty !== show.difficulty) {
+    await db.update(playlists).set({ difficulty }).where(eq(playlists.id, playlistId));
+  }
 
   const links: Partial<Record<SlotKey, string>> = {};
   const currentIds: Partial<Record<SlotKey, string>> = {};

@@ -14,6 +14,7 @@ const rowSchema = z.object({
   links: z.object({ show: link, scorecards: link, tracklist: link, preview: link }),
   description: z.string().trim().max(500),
   visible: z.boolean().nullable(),
+  difficulty: z.enum(["easy", "medium", "hard"]).nullable().optional(),
 });
 const optionsSchema = z.object({ createCategories: z.boolean(), publishNew: z.boolean() });
 
@@ -70,6 +71,7 @@ export async function importShows(rowsInput: unknown, optionsInput: unknown): Pr
         description: row.description || undefined,
         isPublished: row.visible,
         publishNew: options.publishNew,
+        difficulty: row.difficulty ?? null,
       });
       work.push({ line: row.line, label: `${found.category.name} › ${show.name}`, show, created, links: row.links });
     } catch (err) {

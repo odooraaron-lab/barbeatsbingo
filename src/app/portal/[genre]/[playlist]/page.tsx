@@ -12,6 +12,7 @@ import { ShowSession } from "@/components/portal/show-session";
 import { ClaimChecker } from "@/components/portal/claim-checker";
 import { PlayMode, PlayModeToggle, ShowTools } from "@/components/portal/play-mode";
 import { DownloadLink, DownloadMarks, FileDownloadedNote, ShowDownloadedTag } from "@/components/portal/download-marks";
+import { DifficultyTag } from "@/components/portal/difficulty-tag";
 
 function extensionOf(name: string) {
   const ext = name.split(".").pop();
@@ -70,6 +71,7 @@ export default async function ShowPage({ params }: { params: Promise<{ genre: st
           />
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <h1 className="text-[clamp(2.1rem,5vw,3rem)]">{show.name}</h1>
+            <DifficultyTag value={show.difficulty} />
             {!show.isPublished && <span className="tag">Hidden from customers</span>}
             <ShowDownloadedTag />
           </div>

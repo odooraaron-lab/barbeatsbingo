@@ -16,6 +16,7 @@ import { addLinkFile, deleteFile, deletePlaylist, saveShowFiles, updateFile, upd
 import { INTRO_SKIP_SECONDS, SHOW_SLOTS, filesBySlot } from "@/lib/show-files";
 import { hasTimes } from "@/lib/call-list";
 import { Uploader } from "./uploader";
+import { DIFFICULTIES, DifficultyTag } from "@/components/portal/difficulty-tag";
 
 export const metadata: Metadata = { title: "Show" };
 
@@ -66,6 +67,7 @@ export default async function PlaylistAdminPage({ params }: { params: Promise<{ 
       />
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <h1 className="text-[clamp(2.1rem,5vw,3rem)]">{playlist.name}</h1>
+        <DifficultyTag value={playlist.difficulty} />
         {playlist.isPublished ? (
           <span className="tag bg-ok/15 text-ok">Visible to customers</span>
         ) : (
@@ -97,6 +99,27 @@ export default async function PlaylistAdminPage({ params }: { params: Promise<{ 
                 submitLabel="Save show files"
                 pendingLabel="Checking links…"
               >
+                <div className="grid gap-2">
+                  <label htmlFor="difficulty" className="label !mb-0">
+                    How hard is this show?
+                  </label>
+                  <select
+                    id="difficulty"
+                    name="difficulty"
+                    className="field sm:!w-60"
+                    defaultValue={playlist.difficulty ?? ""}
+                  >
+                    <option value="">Not set</option>
+                    {DIFFICULTIES.map((d) => (
+                      <option key={d.value} value={d.value}>
+                        {d.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="hint !mt-0">
+                    Customers see it next to the show&apos;s name: green for Easy, orange for Medium, red for Hard.
+                  </p>
+                </div>
                 {SHOW_SLOTS.map((slot) => {
                   const current = slots[slot.key];
                   return (
