@@ -7,8 +7,9 @@ import { CROWD, MIC, NEON_SIGN, TONEARM, discoSpots, mirrorBall, palmTree, perso
 /**
  * The home page's opening scene: a Bar Beats Bingo night in a bar. Music videos
  * play on the TV, the room watches, and the songs on your scorecard get marked
- * off as they play, until the middle row makes a line and the show stops for a
- * card check.
+ * off as they play. The same card plays on through five rounds, each ending in a
+ * win and a card check: 1 line, 2 lines, 3 lines, the Cross, then Blackout, when
+ * every square is marked and a fresh card starts.
  */
 
 const LETTERS = ["B", "I", "N", "G", "O"];
@@ -41,7 +42,6 @@ const CELLS: (string | null)[] = [
   "Weekend - Mufasa & Hypeman",
   "Ghost - Ella Henderson",
 ];
-const WIN_ROW = 2;
 
 /** The shot on the TV: each song's video gets one, in its own colour. */
 type Look = "mic" | "vinyl" | "disco" | "palms" | "city";
@@ -57,19 +57,70 @@ type Call = {
   flip?: boolean;
 };
 
-// The songs the show plays, in order. Letters go B, I, N, G, O in turn (as on the
-// call list), and a song on the card sits in its letter's column. Song 9 makes the line.
-const CALLS: Call[] = [
-  { cell: 10, title: "Good As Hell", artist: "Lizzo", hue: 330, look: "disco" },
-  { cell: 1, title: "Heat Waves", artist: "Glass Animals", hue: 22, look: "palms" },
-  { cell: null, title: "Shut Up and Dance", artist: "Walk the Moon", hue: 192, look: "city" },
-  { cell: 18, title: "Easy On Me", artist: "Adele", hue: 222, look: "mic" },
-  { cell: 14, title: "Kiss My (Uh Oh)", artist: "Anne-Marie & Little Mix", hue: 300, look: "vinyl" },
-  { cell: 20, title: "Watermelon Sugar", artist: "Harry Styles", hue: 350, look: "palms", flip: true },
-  { cell: 11, title: "Señorita", artist: "Shawn Mendes & Camila Cabello", hue: 32, look: "mic" },
-  { cell: null, title: "Mr. Brightside", artist: "The Killers", hue: 262, look: "city", flip: true },
-  { cell: 13, title: "X", artist: "Jonas Brothers & Karol G", hue: 168, look: "disco" },
+// The songs the show plays, round by round. Numbering carries on from round to round,
+// letters go B, I, N, G, O in turn (as on the call list), and a song on the card sits in
+// its letter's column. Each round ends on the song that wins its prize.
+type Round = { prize: string; calls: Call[] };
+const ROUNDS: Round[] = [
+  {
+    prize: "1 line",
+    calls: [
+      { cell: 10, title: "Good As Hell", artist: "Lizzo", hue: 330, look: "disco" },
+      { cell: 1, title: "Heat Waves", artist: "Glass Animals", hue: 22, look: "palms" },
+      { cell: null, title: "Shut Up and Dance", artist: "Walk the Moon", hue: 192, look: "city" },
+      { cell: 18, title: "Easy On Me", artist: "Adele", hue: 222, look: "mic" },
+      { cell: 14, title: "Kiss My (Uh Oh)", artist: "Anne-Marie & Little Mix", hue: 300, look: "vinyl" },
+      { cell: 20, title: "Watermelon Sugar", artist: "Harry Styles", hue: 350, look: "palms", flip: true },
+      { cell: 11, title: "Señorita", artist: "Shawn Mendes & Camila Cabello", hue: 32, look: "mic" },
+      { cell: null, title: "Mr. Brightside", artist: "The Killers", hue: 262, look: "city", flip: true },
+      { cell: 13, title: "X", artist: "Jonas Brothers & Karol G", hue: 168, look: "disco" },
+    ],
+  },
+  {
+    prize: "2 lines",
+    calls: [
+      { cell: 19, title: "BED", artist: "Joel Corry, RAYE & David Guetta", hue: 280, look: "city" },
+      { cell: 5, title: "Dancing Feet", artist: "Kygo", hue: 186, look: "palms" },
+      { cell: 16, title: "What A Man Gotta Do", artist: "Jonas Brothers", hue: 12, look: "vinyl" },
+      { cell: 7, title: "Despacito", artist: "Luis Fonsi & Daddy Yankee", hue: 40, look: "palms", flip: true },
+      { cell: 23, title: "Weekend", artist: "Mufasa & Hypeman", hue: 318, look: "disco" },
+      { cell: null, title: "Uptown Funk", artist: "Mark Ronson & Bruno Mars", hue: 50, look: "mic" },
+      { cell: 15, title: "SNAP", artist: "Rosa Linn", hue: 205, look: "city", flip: true },
+      { cell: 21, title: "Just You And I", artist: "Tom Walker", hue: 150, look: "vinyl" },
+      { cell: 17, title: "Cold Heart", artist: "Elton John & Dua Lipa", hue: 268, look: "disco" },
+    ],
+  },
+  {
+    prize: "3 lines",
+    calls: [
+      { cell: 3, title: "Cover Me In Sunshine", artist: "P!nk & Willow Sage Hart", hue: 44, look: "palms" },
+      { cell: 4, title: "Dance Monkey", artist: "Tones And I", hue: 340, look: "mic" },
+      { cell: 0, title: "Love Not War", artist: "Jason Derulo & Nuka", hue: 214, look: "city" },
+      { cell: null, title: "Blinding Lights", artist: "The Weeknd", hue: 356, look: "disco" },
+      { cell: 2, title: "Shake It Off", artist: "Taylor Swift", hue: 296, look: "vinyl" },
+    ],
+  },
+  {
+    prize: "The Cross",
+    calls: [
+      { cell: 8, title: "Better When I'm Dancin'", artist: "Meghan Trainor", hue: 326, look: "disco" },
+      { cell: 24, title: "Ghost", artist: "Ella Henderson", hue: 236, look: "city", flip: true },
+      { cell: null, title: "Bad Habits", artist: "Ed Sheeran", hue: 18, look: "mic" },
+      { cell: 6, title: "Final Song", artist: "MØ", hue: 176, look: "palms", flip: true },
+    ],
+  },
+  {
+    prize: "Blackout",
+    calls: [
+      { cell: 22, title: "I Ain't Worried", artist: "OneRepublic", hue: 196, look: "palms" },
+      { cell: null, title: "Dancing Queen", artist: "ABBA", hue: 286, look: "disco" },
+      { cell: 9, title: "No", artist: "Little Mix", hue: 344, look: "vinyl" },
+    ],
+  },
 ];
+const CALLS = ROUNDS.flatMap((r) => r.calls);
+/** Where each round starts in CALLS. */
+const ROUND_START = ROUNDS.map((_, i) => ROUNDS.slice(0, i).reduce((n, r) => n + r.calls.length, 0));
 
 // The TV's drawings. Working them out takes a moment, so it's done while the title
 // screen shows (or the first time a shot needs one), not while the page loads.
@@ -92,6 +143,7 @@ const drawTv = () => [palms, glitter, city, ball, spots].forEach((draw) => draw(
 const MIC_AT = { dx: 31, dy: 10 };
 
 type State = {
+  /** 1 to 5. The card carries on from one round to the next. */
   round: number;
   /** Index into CALLS of the video on the TV; -1 shows the game's title screen. */
   call: number;
@@ -101,10 +153,11 @@ type State = {
 };
 
 const fresh = (round: number): State => ({ round, call: -1, marked: [], bingo: false, clearing: false });
+/** Without motion: the first round's line, being checked. */
 const FINISHED: State = {
   round: 1,
-  call: CALLS.length - 1,
-  marked: CALLS.flatMap((c) => (c.cell === null ? [] : [c.cell])),
+  call: ROUNDS[0].calls.length - 1,
+  marked: ROUNDS[0].calls.flatMap((c) => (c.cell === null ? [] : [c.cell])),
   bingo: true,
   clearing: false,
 };
@@ -137,10 +190,10 @@ function highlighterPath(i: number) {
   return `M${x0.toFixed(2)} ${y0.toFixed(2)}Q${((x0 + x1) / 2).toFixed(2)} ${(y0 + j * 0.5).toFixed(2)} ${x1.toFixed(2)} ${y1.toFixed(2)}`;
 }
 
-/** A quick hand-drawn loop round a row, overlapping where it started. */
-function loopPath(row: number) {
+/** A quick hand-drawn loop round a row (or rows), overlapping where it started. */
+function loopPath(row: number, lastRow = row) {
   const top = cellBox(row * 5).y - 2.1;
-  const bottom = top + CELL + 4.2;
+  const bottom = cellBox(lastRow * 5).y + CELL + 2.1;
   const mid = (top + bottom) / 2;
   const pts: [number, number][] = [
     [9, top + 0.6],
@@ -167,6 +220,29 @@ function loopPath(row: number) {
   }
   return d;
 }
+
+/** A hand-drawn stroke corner to corner through a diagonal, for the Cross. */
+function diagonalPath(from: number, to: number, bend: number) {
+  const a = cellBox(from);
+  const b = cellBox(to);
+  const dx = Math.sign(b.cx - a.cx) * 4.2;
+  const x0 = a.cx - dx;
+  const y0 = a.cy - 4.2;
+  const x1 = b.cx + dx;
+  const y1 = b.cy + 4.2;
+  const mx = (x0 + x1) / 2 + bend;
+  const my = (y0 + y1) / 2 - bend * 0.6;
+  return `M${x0.toFixed(2)} ${y0.toFixed(2)}Q${mx.toFixed(2)} ${my.toFixed(2)} ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+}
+
+/** What gets ringed on the card when each round's prize is won. */
+const WIN_MARKS: string[][] = [
+  [loopPath(2)],
+  [loopPath(2), loopPath(3)],
+  [loopPath(0), loopPath(2), loopPath(3)],
+  [diagonalPath(0, 24, 1.6), diagonalPath(4, 20, -1.4)],
+  [loopPath(0, 4)],
+];
 
 const PERSON_PATHS = CROWD.map((p) => personPath(p.spec));
 
@@ -499,7 +575,7 @@ function Tv({ state }: { state: State }) {
         ) : (
           <span key={`title-${state.round}`} className="show-title">
             <Image src="/brand/logo.png" alt="" width={720} height={376} sizes={LOGO_SIZES} className="show-title-logo" />
-            <span className="show-title-round">Game {state.round}</span>
+            <span className="show-title-round">Round {state.round}</span>
           </span>
         )}
         {state.bingo && (
@@ -509,7 +585,7 @@ function Tv({ state }: { state: State }) {
               <span />
             </span>
             <span className="show-pause-word">Bingo!</span>
-            <span className="show-pause-note">Checking the card</span>
+            <span className="show-pause-note">{ROUNDS[state.round - 1].prize} · checking the card</span>
           </span>
         )}
         <span className="show-glass" />
@@ -606,7 +682,8 @@ const Pint = memo(function Pint() {
 });
 
 function Scorecard({ state }: { state: State }) {
-  const lastMark = state.marked[state.marked.length - 1];
+  // The mark being drawn now: only while the song that made it is still on (not at the next round's title).
+  const lastMark = state.call >= 0 ? CALLS[state.call].cell : null;
   return (
     <div className="show-card" style={{ aspectRatio: `100 / ${CARD_H.toFixed(2)}` }}>
       <div className="show-card-tabs">
@@ -645,7 +722,10 @@ function Scorecard({ state }: { state: State }) {
             className={`show-highlight${cell === lastMark && !state.bingo ? " is-new" : ""}`}
           />
         ))}
-        {state.bingo && <path d={loopPath(WIN_ROW)} pathLength={1} className="show-loop" />}
+        {state.bingo &&
+          WIN_MARKS[state.round - 1].map((d, i) => (
+            <path key={`${state.round}-${i}`} d={d} pathLength={1} className="show-loop" style={{ animationDelay: `${0.45 + i * 0.4}s` }} />
+          ))}
       </svg>
     </div>
   );
@@ -700,29 +780,35 @@ export function ShowScene({ className = "" }: { className?: string }) {
       });
 
     (async () => {
-      let round = 1;
       while (!cancelled) {
-        setState(fresh(round));
-        await wait(2600);
-        for (let k = 0; k < CALLS.length && !cancelled; k++) {
-          const { cell } = CALLS[k];
-          setState((s) => ({ ...s, call: k }));
-          if (cell === null) {
-            await wait(2100);
-            continue;
+        // A fresh card, played on through all five rounds.
+        setState(fresh(1));
+        for (let r = 0; r < ROUNDS.length && !cancelled; r++) {
+          // The next round's title; the card keeps its marks.
+          if (r > 0) setState((s) => ({ ...s, round: r + 1, call: -1, bingo: false }));
+          await wait(2600);
+          for (let j = 0; j < ROUNDS[r].calls.length && !cancelled; j++) {
+            const k = ROUND_START[r] + j;
+            const { cell } = CALLS[k];
+            setState((s) => ({ ...s, call: k }));
+            if (cell === null) {
+              await wait(2100);
+              continue;
+            }
+            // The song plays for a moment before you spot it's on your card.
+            await wait(1150);
+            setState((s) => ({ ...s, marked: [...s.marked, cell] }));
+            await wait(1450);
           }
-          // The song plays for a moment before you spot it's on your card.
-          await wait(1150);
-          setState((s) => ({ ...s, marked: [...s.marked, cell] }));
-          await wait(1450);
+          if (cancelled) return;
+          await wait(250);
+          setState((s) => ({ ...s, bingo: true }));
+          await wait(r === ROUNDS.length - 1 ? 6200 : 5400);
         }
         if (cancelled) return;
-        await wait(250);
-        setState((s) => ({ ...s, bingo: true }));
-        await wait(5400);
+        // Blackout: the card's done, so it's cleared for the next game.
         setState((s) => ({ ...s, clearing: true }));
         await wait(900);
-        round = round >= 4 ? 1 : round + 1; // four quick fire games in a pack
       }
     })();
 
@@ -741,7 +827,7 @@ export function ShowScene({ className = "" }: { className?: string }) {
       className={`show-scene${shown.bingo ? " is-bingo" : ""}${onScreen ? "" : " is-paused"} ${className}`}
       style={{ "--hue": hue } as CSSProperties}
       role="img"
-      aria-label="A Bar Beats Bingo night in a bar: music videos play on the TV, the room watches, and a player marks off the songs on their scorecard as they play, until they get a line and the show stops to check the card."
+      aria-label="A Bar Beats Bingo night in a bar: music videos play on the TV, the room watches, and a player marks off the songs on their scorecard as they play. The same card plays on through five rounds, from one line to a full-card blackout, with the show stopping to check the card at each win."
     >
       <span className="show-wall" />
       <NeonSign />
