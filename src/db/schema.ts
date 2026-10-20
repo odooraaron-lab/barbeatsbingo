@@ -305,3 +305,16 @@ export const siteFiles = pgTable("site_files", {
   data: bytea("data").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** Instagram posts by venues using Bar Beats Bingo, linked from the bottom of the home page. */
+export const socialPosts = pgTable("social_posts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  // The post's link, tidied to https://www.instagram.com/reel/<code>/ (or /p/…).
+  url: text("url").notNull().unique(),
+  // The account that posted it, without the @, if known.
+  handle: text("handle").notNull().default(""),
+  caption: text("caption").notNull().default(""),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isPublished: boolean("is_published").notNull().default(true),
+  ...timestamps,
+});

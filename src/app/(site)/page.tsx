@@ -4,6 +4,7 @@ import { ShowScene } from "@/components/site/show-scene";
 import { Photo } from "@/components/site/photo";
 import { CallToAction } from "@/components/site/call-to-action";
 import { CrowdPrompts, QuickFireGlance } from "@/components/site/quick-fire";
+import { SeenOnInstagram } from "@/components/site/seen-on-instagram";
 import { IMAGES } from "@/lib/site";
 
 const STATS = [
@@ -278,6 +279,8 @@ export default function HomePage() {
       </section>
 
       <CallToAction />
+
+      <SeenOnInstagram />
     </>
   );
 }

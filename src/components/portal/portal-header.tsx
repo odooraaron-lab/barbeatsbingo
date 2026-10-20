@@ -12,6 +12,7 @@ export function PortalHeader({ user, area }: { user: SessionUser; area: "portal"
           { href: "/admin/users", label: "Customers" },
           { href: "/admin/library", label: "Library" },
           { href: "/admin/enquiries", label: "Enquiries" },
+          { href: "/admin/website", label: "Website" },
           { href: "/portal", label: "Customer view" },
         ]
       : [
