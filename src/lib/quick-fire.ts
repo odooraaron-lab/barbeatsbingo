@@ -3,24 +3,55 @@
 
 export const GLANCE = [
   { title: "4 games per pack", body: "Run one game, or run all four in a night." },
-  { title: "15 to 25 minutes each", body: "Each song clip is 25 seconds, so games move fast." },
+  { title: "7 to 27 minutes each", body: "Each song clip is 25 seconds, so games move fast." },
   { title: "One fast way to win", body: "One winning pattern per game, then optional Blackout." },
 ];
 
-export type Pattern = { name: string; hint: string; cells: (row: number, col: number) => boolean };
+export type Pattern = { name: string; hint: string; time: string; cells: (row: number, col: number) => boolean };
 
+/** The five patterns the Game Validation Engine checks, with the time to the first winner (10 to 30 cards in play). */
 export const PATTERNS: Pattern[] = [
-  { name: "1 line", hint: "Any one full line", cells: (r) => r === 1 },
-  { name: "2 or 3 lines", hint: "Two or three full lines", cells: (r) => r % 2 === 0 },
-  { name: "The Cross", hint: "Both diagonals, forming an X", cells: (r, c) => r === c || r + c === 4 },
-  { name: "Blackout", hint: "The whole card", cells: () => true },
+  { name: "1 line", hint: "Any one full line", time: "About 7 to 12 min", cells: (r) => r === 1 },
+  { name: "2 lines", hint: "Any two full lines", time: "About 17 to 19 min", cells: (r) => r === 1 || r === 3 },
+  { name: "3 lines", hint: "Any three full lines", time: "About 20 to 22 min", cells: (r) => r % 2 === 0 },
+  { name: "The X", hint: "Both diagonals", time: "About 18 to 22 min", cells: (r, c) => r === c || r + c === 4 },
+  { name: "Blackout", hint: "The whole card", time: "About 25 to 27 min", cells: () => true },
+];
+
+/** Checking a winner against the answer key, from the host guide. */
+export const CHECK_STEPS = [
+  { title: "Pause and note the song", body: "Pause the game, find the song that just played on the call list and note its number." },
+  { title: "Get the card number", body: "Ask for the scorecard and read the card number printed on it." },
+  {
+    title: "Find it on the answer key",
+    body: "Find that card number, then read across to the column for the pattern you're playing.",
+  },
+  {
+    title: "Compare the two numbers",
+    body: "If the answer key number is the same as or lower than the song you're up to, it's a winner. If it's higher, the card isn't there yet, so resume the game.",
+  },
+];
+
+/** The guide's worked example, playing 1 line: song 16 has just played. */
+export const EXAMPLE_CALLS = [
+  { n: 13, time: "5:06", song: "Just Like Jesse James", artist: "Cher" },
+  { n: 14, time: "5:29", song: "Birds Of A Feather", artist: "Billie Eilish" },
+  { n: 15, time: "5:52", song: "Green Green Grass", artist: "George Ezra" },
+  { n: 16, time: "6:15", song: "Little Red Corvette", artist: "Prince", current: true },
+  { n: 17, time: "6:38", song: "Baby Got Back", artist: "Sir Mix a Lot" },
+];
+export const EXAMPLE_KEY = [
+  { card: "039", at: [50, 64, 67, 74, 74] },
+  { card: "040", at: [15, 58, 62, 74, 74], calling: true },
+  { card: "041", at: [37, 52, 67, 67, 75], calling: true },
+  { card: "042", at: [36, 65, 66, 75, 75] },
 ];
 
 export const WHAT_YOU_NEED = [
   "A laptop or Orange Door system, plus speakers",
   "TVs, if you're running the video version",
   "Printed scorecards, with a few spares",
-  "The printed track listing",
+  "The printed call list and answer key",
   "Pens or markers that work",
   "Prizes for your winners",
   "A microphone, and a big smile",
@@ -29,7 +60,7 @@ export const WHAT_YOU_NEED = [
 export const NIGHT_AT_A_GLANCE = [
   {
     title: "Before",
-    items: ["Cards printed and cut", "Track listing on hand", "Sound and TVs tested", "Prizes on show", "Pens on the tables"],
+    items: ["Cards printed and cut", "Call list and answer key on hand", "Sound and TVs tested", "Prizes on show", "Pens on the tables"],
   },
   {
     title: "During",
@@ -60,7 +91,7 @@ export const TIPS_BEFORE = [
   "Test the sound and the TVs with the real game files.",
   "Put the prizes where everyone can see them.",
   "Print spare scorecards for latecomers.",
-  "Have the track listing on a clipboard, not loose on the bar.",
+  "Have the call list and answer key on a clipboard, not loose on the bar.",
   "Pick tonight's crowd game prompts.",
 ];
 
@@ -75,7 +106,7 @@ export const TIPS_DURING = [
 export const SITUATIONS = [
   {
     what: "A false Bingo",
-    todo: "Have a laugh with them, not at them, then resume. The track listing is always the final word.",
+    todo: "Have a laugh with them, not at them, then resume. The answer key is always the final word.",
   },
   { what: "Phones and song apps (Shazam)", todo: "The host decides. Say your rule in the welcome so everyone knows." },
   { what: "Latecomers", todo: "Hand them a card and get them playing from the next game." },
@@ -84,7 +115,7 @@ export const SITUATIONS = [
     what: "Two Bingos at once",
     todo: "Check both cards. If both are right, split the prize or run a tiebreak: the first of the two to name the next song wins.",
   },
-  { what: "A missed song", todo: "Don't replay it. Read the title from the track listing and move on." },
+  { what: "A missed song", todo: "Don't replay it. Read the title from the call list and move on." },
 ];
 
 export const PRIZES = [

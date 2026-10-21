@@ -8,7 +8,7 @@ import { CROWD, MIC, NEON_SIGN, TONEARM, discoSpots, mirrorBall, palmTree, perso
  * The home page's opening scene: a Bar Beats Bingo night in a bar. Music videos
  * play on the TV, the room watches, and the songs on your scorecard get marked
  * off as they play. The same card plays on through five rounds, each ending in a
- * win and a card check: 1 line, 2 lines, 3 lines, the Cross, then Blackout, when
+ * win and a card check: 1 line, 2 lines, 3 lines, the X, then Blackout, when
  * every square is marked and a fresh card starts.
  */
 
@@ -101,7 +101,7 @@ const ROUNDS: Round[] = [
     ],
   },
   {
-    prize: "The Cross",
+    prize: "The X",
     calls: [
       { cell: 8, title: "Better When I'm Dancin'", artist: "Meghan Trainor", hue: 326, look: "disco" },
       { cell: 24, title: "Ghost", artist: "Ella Henderson", hue: 236, look: "city", flip: true },
@@ -221,7 +221,7 @@ function loopPath(row: number, lastRow = row) {
   return d;
 }
 
-/** A hand-drawn stroke corner to corner through a diagonal, for the Cross. */
+/** A hand-drawn stroke corner to corner through a diagonal, for the X. */
 function diagonalPath(from: number, to: number, bend: number) {
   const a = cellBox(from);
   const b = cellBox(to);

@@ -41,7 +41,7 @@ export default function FundraisingPage() {
             favourite tunes.
           </p>
           <p>
-            We can supply a one-off game pack for your event: four quick fire games of 15 to 25 minutes each, every one
+            We can supply a one-off game pack for your event: four quick fire games of 7 to 27 minutes each, every one
             with its own prize, so there are plenty of chances to win. It&apos;s easy to run, loads of fun and guaranteed
             to have your guests laughing, singing and maybe even dancing in their seats.
           </p>

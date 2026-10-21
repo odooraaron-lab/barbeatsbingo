@@ -16,13 +16,13 @@ export default function VideoGuidePage() {
       intro={
         <p>
           How to run the music video version from your own laptop, on your screens. Your game pack has four quick fire
-          games of 15 to 25 minutes each: run one, or run all four.
+          games of 7 to 27 minutes each: run one, or run all four.
         </p>
       }
       steps={quickFireSteps(
         <p>
           Download your game pack from the <Link href="/portal">customer portal</Link>: four quick fire games as video
-          files, plus the scorecards and the track listing. Print the track listing and keep it within reach. Connect
+          files, plus the scorecards, the call list and the answer key. Print the call list and answer key and keep them within reach. Connect
           the laptop to your speakers and TVs, and test the sound at playing volume before the doors open.
         </p>,
         <>Play the games one at a time, in order. Use play and pause on your laptop to run each game.</>,

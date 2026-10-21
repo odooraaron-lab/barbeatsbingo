@@ -16,14 +16,14 @@ export default function OrangeDoorGuidePage() {
       intro={
         <p>
           Everything you need to run a quick fire night on your Orange Door system. Your game pack has four quick fire
-          games of 15 to 25 minutes each: run one, or run all four.
+          games of 7 to 27 minutes each: run one, or run all four.
         </p>
       }
       steps={quickFireSteps(
         <p>
-          Print the track listing and keep it within reach. Search <strong>BINGO</strong> in the search bar on your
+          Print the call list and answer key and keep them within reach. Search <strong>BINGO</strong> in the search bar on your
           Orange Door system and find your quick fire games. Test the sound and the TVs at playing volume before the
-          doors open. The scorecards and track listing are in your <Link href="/portal">customer portal</Link>.
+          doors open. The scorecards, call list and answer key are in your <Link href="/portal">customer portal</Link>.
         </p>,
         <>
           Play one game at a time. Use play and pause on your Orange Door system, or run it from your phone with the

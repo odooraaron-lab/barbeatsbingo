@@ -20,15 +20,15 @@ const NIGHT = [
   },
   {
     title: "Name the way to win",
-    body: "Tell the room this game's winning pattern, like 1 line or the Cross, then press play.",
+    body: "Tell the room this game's winning pattern, like 1 line or the X, then press play.",
   },
   {
     title: "Cross off the songs",
-    body: "Each song plays for 25 seconds, so a quick fire game is over in 15 to 25 minutes.",
+    body: "Each song plays for 25 seconds, so a quick fire game is over in 7 to 27 minutes.",
   },
   {
     title: "Someone yells BINGO!",
-    body: "Pause, check their card against the track listing and hand over the prize. End there, or play on to Blackout.",
+    body: "Pause, look up their card number on the answer key and hand over the prize. End there, or play on to Blackout.",
   },
 ];
 

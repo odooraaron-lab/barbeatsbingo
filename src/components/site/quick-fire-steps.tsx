@@ -11,8 +11,8 @@ export function quickFireSteps(setup: React.ReactNode, control: React.ReactNode)
       title: "Prepare your scorecards",
       body: (
         <p>
-          Print the scorecards. Each A4 sheet holds two A5 cards, so cut them down the middle. Hand out one per player or
-          pair, with a pen or marker. Print a few spares for latecomers.
+          Print the scorecards. Each A4 sheet holds two A5 cards, so cut them down the middle. Hand out one per player
+          or pair, with a pen or marker. Print a few spares for latecomers.
         </p>
       ),
     },
@@ -32,8 +32,8 @@ export function quickFireSteps(setup: React.ReactNode, control: React.ReactNode)
         <>
           <p>
             Before each game, tell the room the <Link href="/more-information#patterns">winning pattern</Link>, like 1
-            line or the Cross, and whether you&apos;re playing on to Blackout. Then press play and sing along.
-            It&apos;s half the fun.
+            line or the X, and whether you&apos;re playing on to Blackout. Then press play and sing along. It&apos;s
+            half the fun.
           </p>
           <p>{control}</p>
         </>
@@ -43,9 +43,10 @@ export function quickFireSteps(setup: React.ReactNode, control: React.ReactNode)
       title: "When someone calls BINGO!",
       body: (
         <p>
-          Pause the game. Check their card against the track listing and read their song titles out on the microphone,
-          so the whole room is in on it. If the card checks out, award the prize. Then end the game there, or resume and
-          play on to Blackout.
+          Pause the game. Check their card number on the answer key (
+          <Link href="/more-information#checking">here&apos;s how</Link>) and read their song titles out on the
+          microphone, so the whole room is in on it. If the card checks out, award the prize. Then end the game there,
+          or resume and play on to Blackout.
         </p>
       ),
     },
