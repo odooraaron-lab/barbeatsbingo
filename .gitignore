@@ -45,3 +45,7 @@ next-env.d.ts
 
 # copied from node_modules on dev/build
 /public/pdfjs
+
+# never commit private files (guides, exports, customer data)
+/private/
+*.pdf

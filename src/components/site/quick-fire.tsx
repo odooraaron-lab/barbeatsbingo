@@ -90,7 +90,7 @@ export function CheckingAWinner() {
         <div className="mt-4 grid gap-6 lg:grid-cols-2">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-mist">Call list. Song 16 has just played.</p>
-            <div className="mt-2 overflow-x-auto">
+            <div className="mt-2 overflow-x-auto" tabIndex={0} role="region" aria-label="Call list example">
               <table className="table text-sm">
                 <thead>
                   <tr>
@@ -115,7 +115,7 @@ export function CheckingAWinner() {
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-mist">Answer key. Cards 040 and 041 both call Bingo.</p>
-            <div className="mt-2 overflow-x-auto">
+            <div className="mt-2 overflow-x-auto" tabIndex={0} role="region" aria-label="Answer key example">
               <table className="table text-sm">
                 <thead>
                   <tr>

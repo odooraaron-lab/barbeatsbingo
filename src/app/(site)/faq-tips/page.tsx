@@ -273,7 +273,7 @@ export default function FaqPage() {
         <p className="mt-3 max-w-2xl text-lg text-white/90">
           Quick fire prizes are given out per game. Keep it simple or go big. The reveal matters more than the value.
         </p>
-        <div className="panel mt-8 overflow-x-auto p-2 sm:p-4">
+        <div className="panel mt-8 overflow-x-auto p-2 sm:p-4" tabIndex={0} role="region" aria-label="Prizes">
           <table className="table">
             <thead>
               <tr>

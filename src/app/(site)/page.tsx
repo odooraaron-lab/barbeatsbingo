@@ -172,7 +172,7 @@ export default function HomePage() {
           {STYLES.map((s) => (
             <li key={s.name} className={`rounded-2xl p-4 sm:p-6 ${s.tone}`}>
               <h3 className="text-[clamp(1.15rem,4.6vw,1.65rem)] leading-tight">{s.name}</h3>
-              <p className="mt-2 text-[0.9rem] leading-snug opacity-90 sm:text-[0.98rem]">{s.blurb}</p>
+              <p className="mt-2 text-[0.9rem] leading-snug sm:text-[0.98rem]">{s.blurb}</p>
             </li>
           ))}
         </ul>

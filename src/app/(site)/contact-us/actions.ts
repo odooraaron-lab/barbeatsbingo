@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { enquiries } from "@/db/schema";
 import { contactEmail, sendEmail } from "@/lib/email";
+import { attemptsFromIp, clientIp, noteAttempt } from "@/lib/rate-limit";
 
 export type ContactState = { status: "idle" | "sent" | "error"; message?: string; fields?: Record<string, string> };
 
@@ -30,6 +31,17 @@ export async function sendEnquiry(_prev: ContactState, formData: FormData): Prom
     return { status: "error", message: parsed.error.issues[0]?.message ?? "Check the form and try again.", fields: raw };
   }
   const data = parsed.data;
+
+  // At most 5 messages an hour from one place.
+  const ip = await clientIp();
+  if ((await attemptsFromIp("contact", ip, 60).catch(() => 0)) >= 5) {
+    return {
+      status: "error",
+      message: "You've sent a few messages already. We'll be in touch soon, or try again in an hour.",
+      fields: raw,
+    };
+  }
+  await noteAttempt("contact", ip || "unknown", ip).catch(() => {});
 
   let saved = false;
   try {

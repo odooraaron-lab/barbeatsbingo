@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
+import { createSession, destroyAllSessionsFor } from "@/lib/session";
 import { hashPassword, passwordProblem, verifyPassword } from "@/lib/password";
 import { logActivity } from "@/lib/activity";
 
@@ -23,6 +24,9 @@ export async function changePassword(_prev: PasswordState, formData: FormData): 
   if (next !== confirm) return { error: "The two new passwords don't match." };
 
   await db.update(users).set({ passwordHash: await hashPassword(next) }).where(eq(users.id, user.id));
+  // Sign out everywhere else (in case someone else knew the old password); stay signed in here.
+  await destroyAllSessionsFor(user.id);
+  await createSession(user.id);
   await logActivity(user.id, "password_changed");
-  return { ok: "Password changed. Use your new password next time you log in." };
+  return { ok: "Password changed. You've been signed out on your other devices." };
 }

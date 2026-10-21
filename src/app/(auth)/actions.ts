@@ -1,7 +1,6 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { and, count, eq, gt, lt } from "drizzle-orm";
 import { db } from "@/db";
 import { authAttempts, passwordTokens, sessions, users } from "@/db/schema";
@@ -10,6 +9,7 @@ import { getDummyHash, hashPassword, passwordProblem, verifyPassword } from "@/l
 import { safeNextPath } from "@/lib/auth";
 import { emailConfigured, sendEmail } from "@/lib/email";
 import { createPasswordLink, findValidToken } from "@/lib/password-links";
+import { attemptsFor, attemptsFromIp, clientIp, failedLoginsFromIp, noteAttempt } from "@/lib/rate-limit";
 import { logActivity } from "@/lib/activity";
 
 export type FormState = { error?: string; ok?: string; email?: string };
@@ -17,10 +17,6 @@ export type FormState = { error?: string; ok?: string; email?: string };
 const MAX_FAILURES = 8;
 const LOCKOUT_MINUTES = 15;
 
-async function clientIp() {
-  const h = await headers();
-  return (h.get("x-forwarded-for") ?? "").split(",")[0]?.trim().slice(0, 64) ?? "";
-}
 
 export async function login(_prev: FormState, formData: FormData): Promise<FormState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -28,6 +24,12 @@ export async function login(_prev: FormState, formData: FormData): Promise<FormS
   const next = formData.get("next");
 
   if (!email || !password) return { error: "Enter your email and password.", email };
+
+  // Someone trying many accounts from one place.
+  const ip = await clientIp();
+  if ((await failedLoginsFromIp(ip, LOCKOUT_MINUTES)) >= 30) {
+    return { error: `Too many unsuccessful attempts. Wait ${LOCKOUT_MINUTES} minutes and try again.`, email };
+  }
 
   const since = new Date(Date.now() - LOCKOUT_MINUTES * 60 * 1000);
   const [{ failures }] = await db
@@ -51,7 +53,7 @@ export async function login(_prev: FormState, formData: FormData): Promise<FormS
     ok = false;
   }
 
-  await db.insert(authAttempts).values({ email, ip: await clientIp(), success: ok });
+  await db.insert(authAttempts).values({ email, ip, success: ok });
 
   if (user && !ok) await logActivity(user.id, "login_failed");
   if (!user || !ok) {
@@ -89,8 +91,16 @@ export async function requestPasswordReset(_prev: FormState, formData: FormData)
     };
   }
 
+  // At most 3 reset emails an hour per address, and 10 requests an hour from one place.
+  const ip = await clientIp();
+  if ((await attemptsFromIp("reset", ip, 60)) >= 10) {
+    return { error: "Too many reset requests. Please try again in an hour.", email };
+  }
+  const recent = await attemptsFor("reset", email, 60);
+  await noteAttempt("reset", email, ip);
+
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-  if (user?.isActive) {
+  if (user?.isActive && recent < 3) {
     const link = await createPasswordLink(user.id, "reset");
     await sendEmail({
       to: user.email,

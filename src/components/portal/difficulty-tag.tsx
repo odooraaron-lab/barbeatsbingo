@@ -9,7 +9,7 @@ export const DIFFICULTIES: { value: Difficulty; label: string }[] = [
 const STYLE: Record<Difficulty, { label: string; bars: number; className: string }> = {
   easy: { label: "Easy", bars: 1, className: "bg-ok/15 text-ok" },
   medium: { label: "Medium", bars: 2, className: "bg-tang/15 text-tang" },
-  hard: { label: "Hard", bars: 3, className: "bg-red/20 text-red-bright" },
+  hard: { label: "Hard", bars: 3, className: "bg-red/20 text-[#ff8e96]" },
 };
 
 /** How hard a show is: green Easy, orange Medium, red Hard, with one to three bars. */

@@ -95,10 +95,12 @@ function textToHtml(text: string) {
 /** Absolute base URL for links in emails. */
 export async function appUrl() {
   if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
+  // Vercel's own record of the main domain, not the request's Host header (which a crafted
+  // request could set, to point password links at another site).
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host");
   const proto = h.get("x-forwarded-proto") ?? "https";
   if (host) return `${proto}://${host}`;
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
   return "http://localhost:3000";
 }

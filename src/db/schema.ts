@@ -101,7 +101,7 @@ export const authAttempts = pgTable(
     success: boolean("success").notNull(),
     ...timestamps,
   },
-  (t) => [index("auth_attempts_email_idx").on(t.email, t.createdAt)],
+  (t) => [index("auth_attempts_email_idx").on(t.email, t.createdAt), index("auth_attempts_ip_idx").on(t.ip, t.createdAt)],
 );
 
 /** Top level of the library, e.g. "Country", "Pub Classics". */
