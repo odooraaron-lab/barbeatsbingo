@@ -27,7 +27,8 @@ export type ActivityEvent = {
   showName: string | null;
 };
 
-export async function customerTimeline(userId: string, filter: ActivityFilter, limit: number) {
+/** Everything this customer has done, newest first: the full history, nothing left out. */
+export async function customerTimeline(userId: string, filter: ActivityFilter) {
   const kinds = ACTIVITY_FILTERS[filter].kinds;
   const { rows } = await db.execute<{
     id: string;
@@ -42,9 +43,8 @@ export async function customerTimeline(userId: string, filter: ActivityFilter, l
     left join playlists p on p.id = a.playlist_id
     where a.user_id = ${userId}
       ${kinds ? sql`and a.kind::text = any(${sql.param([...kinds])}::text[])` : sql``}
-    order by a.created_at desc
-    limit ${limit + 1}`);
-  const events: ActivityEvent[] = rows.slice(0, limit).map((r) => ({
+    order by a.created_at desc`);
+  const events: ActivityEvent[] = rows.map((r) => ({
     id: r.id,
     kind: r.kind,
     at: new Date(r.at),
@@ -52,7 +52,7 @@ export async function customerTimeline(userId: string, filter: ActivityFilter, l
     showId: r.show_id,
     showName: r.show_name,
   }));
-  return { events, more: rows.length > limit };
+  return { events };
 }
 
 export type DownloadedShow = {

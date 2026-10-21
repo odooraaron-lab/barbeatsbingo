@@ -29,13 +29,12 @@ export default async function UserPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ created?: string; log?: string; n?: string }>;
+  searchParams: Promise<{ created?: string; log?: string }>;
 }) {
   const admin = await requireAdmin();
   const { id } = await params;
-  const { created, log, n } = await searchParams;
+  const { created, log } = await searchParams;
   const filter: ActivityFilter = log && log in ACTIVITY_FILTERS ? (log as ActivityFilter) : "all";
-  const limit = Math.min(Math.max(Number(n) || 60, 60), 2000);
   if (!z.uuid().safeParse(id).success) notFound();
 
   const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1);
@@ -47,7 +46,7 @@ export default async function UserPage({
     db.select().from(playlists).orderBy(asc(playlists.sortOrder), asc(playlists.name)),
     customerSummary(id),
     customerDownloadedShows(id),
-    customerTimeline(id, filter, limit),
+    customerTimeline(id, filter),
   ]);
 
   const genres = cats.map((c) => ({
@@ -179,14 +178,14 @@ export default async function UserPage({
         <DownloadedShows shows={shows} />
 
         <h3 className="mt-8 font-sans text-lg font-bold">Everything they&apos;ve done</h3>
-        <ActivityTimeline events={timeline.events} more={timeline.more} filter={filter} limit={limit} />
+        <ActivityTimeline events={timeline.events} filter={filter} />
       </section>
 
       {!isSelf && (
         <section className="mt-10 max-w-3xl rounded-[var(--radius-card)] border border-red/40 p-6 sm:p-8">
           <h2 className="font-sans text-xl font-bold">Delete customer</h2>
           <p className="mt-2 text-mist">
-            Removes their account and download history for good. To pause their access instead, switch their account off.
+            Removes their account and their whole activity history (downloads, logins, everything) for good. To stop them logging in but keep the history, switch their account off instead.
           </p>
           <div className="mt-5">
             <ActionForm
