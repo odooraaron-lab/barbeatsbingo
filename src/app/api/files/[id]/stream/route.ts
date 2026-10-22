@@ -11,7 +11,8 @@ import { mediaTypeFor, relayAudioRange } from "@/lib/media-relay";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Gives the audio player the file after checking access. Playing isn't counted as a download.
+// Gives the show page's player the file (sound or video) after checking access. Only for
+// accounts allowed to play shows on the site. Playing isn't counted as a download.
 //
 // Usually this just points the browser at the file's own address. iPhones are fussier
 // than computers: they only play links that answer byte-range requests and say they're
@@ -22,6 +23,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const { id } = await params;
   const user = await getSessionUser();
   if (!user) return new NextResponse("Log in to play this file.", { status: 401 });
+  if (!user.canPlay)
+    return new NextResponse("Playing shows on the site isn't switched on for your account.", { status: 403 });
 
   const file = UUID.test(id) ? await getDownloadableFile(user, id) : null;
   if (!file || (file.kind !== "video" && file.kind !== "audio" && file.kind !== "preview")) {

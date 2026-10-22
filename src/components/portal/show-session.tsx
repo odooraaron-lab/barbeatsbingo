@@ -24,7 +24,9 @@ export type RemoteSound = {
   resume: () => void;
   /** Moves it to `time` seconds into the file. */
   seek: (time: number) => void;
-  /** Plays the sound on this device instead. */
+  /** The other device is showing the video, not just playing the sound. */
+  video: boolean;
+  /** Plays the show on this device instead. */
   takeOver: () => void;
 };
 
@@ -45,8 +47,8 @@ type ShowSessionValue = {
   following: boolean;
   /** The host sets how many songs have played; null goes back to following the player. */
   setPlayed: (n: number | null) => void;
-  /** The player reports its position as it plays. */
-  report: (time: number, playing: boolean) => void;
+  /** The player reports its position as it plays, and whether it's showing the video. */
+  report: (time: number, playing: boolean, video?: boolean) => void;
   /** Jump the show to a point, e.g. when a song on the call list is tapped. */
   seekTo: (time: number) => void;
   /** The track list hands over songs it read itself, if the server hadn't. */
@@ -119,7 +121,8 @@ export function ShowSession({
   /** The server's clock, ticking while there's a shared game (0 until known). */
   const [serverNow, setServerNow] = useState(0);
   /** What this device's own player is doing. */
-  const local = useRef({ time: 0, playing: false });
+  const local = useRef({ time: 0, playing: false, video: false });
+  const [video, setVideo] = useState(false);
   const overrideRef = useRef<number | null>(null);
   /** Set once the shared game has been read after the page loaded. */
   const started = useRef(false);
@@ -128,11 +131,12 @@ export function ShowSession({
   /** Set when this device stops the show, until it plays again. */
   const released = useRef(false);
 
-  const report = useCallback((t: number, p: boolean) => {
+  const report = useCallback((t: number, p: boolean, v = false) => {
     if (p) released.current = false;
-    local.current = { time: t, playing: p };
+    local.current = { time: t, playing: p, video: v };
     setTime(t);
     setPlaying(p);
+    setVideo(v);
   }, []);
 
   const offerCallList = useCallback((list: CallList) => {
@@ -147,7 +151,8 @@ export function ShowSession({
   const callList = useMemo(() => {
     if (!initialCallList) return offered;
     // Read before the site looked for answer keys: use the one read from the PDF here.
-    if (initialCallList.answers === undefined && offered?.answers) return { ...initialCallList, answers: offered.answers };
+    if (initialCallList.answers === undefined && offered?.answers)
+      return { ...initialCallList, answers: offered.answers };
     return initialCallList;
   }, [initialCallList, offered]);
 
@@ -172,11 +177,12 @@ export function ShowSession({
       const now = clock();
       const base =
         s && elsewhere(s, now)
-          ? { time: positionAt(s, now), playing: s.playing, sound: s.sound }
+          ? { time: positionAt(s, now), playing: s.playing, sound: s.sound, video: !!s.video }
           : {
               time: local.current.time,
               playing: local.current.playing,
               sound: local.current.playing || (s?.sound === me && !released.current) ? me : null,
+              video: local.current.video,
             };
       return { ...base, played: overrideRef.current, ...patch, by: me };
     },
@@ -312,18 +318,19 @@ export function ShowSession({
     };
   }, [syncUrl, me, receive, send, clock, together]);
 
-  // Share what happens on this device: playing the sound here, pausing, a jump.
+  // Share what happens on this device: playing the sound here, pausing, a jump, switching to the video.
   useEffect(() => {
     if (!syncUrl || !started.current) return;
     const s = shared.current;
     if (playing) {
-      if (!s || s.sound !== me || !s.playing) send({ playing: true, time, sound: me });
-      else if (Math.abs(positionAt(s, clock()) - time) > 2) send({ time });
+      if (!s || s.sound !== me || !s.playing) send({ playing: true, time, sound: me, video });
+      else if (Math.abs(positionAt(s, clock()) - time) > 2) send({ time, video });
+      else if (!!s.video !== video) send({ video });
     } else if (s && s.sound === me) {
-      if (s.playing) send({ playing: false, time });
-      else if (Math.abs(s.time - time) > 2) send({ time });
+      if (s.playing) send({ playing: false, time, video });
+      else if (Math.abs(s.time - time) > 2 || !!s.video !== video) send({ time, video });
     }
-  }, [syncUrl, playing, time, send, clock, me]);
+  }, [syncUrl, playing, time, video, send, clock, me]);
 
   // Keep the server's clock ticking here while there's a shared game: often while
   // following another device's sound, so the clock and songs move smoothly.
@@ -374,6 +381,7 @@ export function ShowSession({
         ? {
             playing: sharedState.playing,
             time: remoteTime,
+            video: !!sharedState.video,
             pause: () => send({ playing: false }),
             resume: () => send({ playing: true }),
             seek: (t: number) => send({ time: t }),
@@ -413,7 +421,23 @@ export function ShowSession({
       remote,
       release,
     }),
-    [showTime, showPlaying, callList, cards, timed, played, following, setPlayed, report, seekTo, offerCallList, registerPlayer, hasPlayer, remote, release],
+    [
+      showTime,
+      showPlaying,
+      callList,
+      cards,
+      timed,
+      played,
+      following,
+      setPlayed,
+      report,
+      seekTo,
+      offerCallList,
+      registerPlayer,
+      hasPlayer,
+      remote,
+      release,
+    ],
   );
 
   return <ShowSessionContext.Provider value={value}>{children}</ShowSessionContext.Provider>;

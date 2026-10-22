@@ -173,6 +173,9 @@ export async function getPlaylist(user: SessionUser, categorySlug: string, playl
       fileName: files.fileName,
       sizeBytes: files.sizeBytes,
       durationSeconds: files.durationSeconds,
+      // Whether the link plays in the browser as it is, and answers byte ranges (null: not checked yet).
+      streamDirect: files.streamDirect,
+      byteRanges: files.byteRanges,
       meta: files.meta,
       createdAt: files.createdAt,
     })

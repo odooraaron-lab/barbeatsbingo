@@ -19,6 +19,7 @@ const change = z.object({
   time: z.number().finite().min(0).max(24 * 3600),
   playing: z.boolean(),
   sound: z.string().min(1).max(64).nullable(),
+  video: z.boolean().optional(),
   played: z.number().int().min(0).max(999).nullable(),
   by: z.string().min(1).max(64),
 });

@@ -14,7 +14,15 @@ const PlayModeContext = createContext<PlayModeValue>({ on: false, allowed: false
  * it's kept on their account, so it's the same on all their devices. `allowed` is
  * false when an admin has taken the tools away from them.
  */
-export function PlayMode({ allowed, initialOn, children }: { allowed: boolean; initialOn: boolean; children: React.ReactNode }) {
+export function PlayMode({
+  allowed,
+  initialOn,
+  children,
+}: {
+  allowed: boolean;
+  initialOn: boolean;
+  children: React.ReactNode;
+}) {
   const [on, setOnState] = useState(allowed && initialOn);
   const [, startTransition] = useTransition();
   const setOn = (next: boolean) => {
@@ -72,22 +80,45 @@ export function PlayModeToggle() {
 }
 
 /**
+ * Where a show's video is drawn: above the call list, wide, rather than in the narrow
+ * column with the player's buttons. `undefined` outside ShowTools (the player then
+ * draws it itself); null until the spot is on the page.
+ */
+const VideoStageContext = createContext<HTMLDivElement | null | undefined>(undefined);
+
+export function useVideoStage() {
+  return useContext(VideoStageContext);
+}
+
+/**
  * Lays out the track list and, while the play tools are on, the player and checker
- * beside it (above it on phones).
+ * beside it (above it on phones). The video, when one is playing here, goes above the
+ * track list (on phones, above the player).
  */
 export function ShowTools({ trackList, side }: { trackList: React.ReactNode; side: React.ReactNode }) {
   const { on } = usePlayMode();
+  const [stage, setStage] = useState<HTMLDivElement | null>(null);
   const tools = on ? side : null;
-  if (!trackList) return tools ? <div className="mt-10 max-w-md">{tools}</div> : null;
+  if (!tools) return trackList ? <div className="mt-14">{trackList}</div> : null;
   return (
-    <div className={`mt-14 grid items-start gap-8 ${tools ? "lg:grid-cols-[minmax(0,1fr)_340px]" : ""}`}>
-      {trackList}
-      {tools && (
-        // Stays in view beside the call list; if it's taller than the window, it scrolls by itself.
-        <aside className="order-first lg:sticky lg:top-6 lg:order-none lg:mt-[4.25rem] lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto lg:overscroll-contain lg:[scrollbar-width:thin]">
-          {tools}
-        </aside>
+    <VideoStageContext.Provider value={stage}>
+      {!trackList ? (
+        <div className="mt-10">
+          <div ref={setStage} />
+          <div className="max-w-md">{tools}</div>
+        </div>
+      ) : (
+        // Phones: video, then the player and checker, then the call list. Wider: the video and
+        // call list on the left, the player and checker beside them.
+        <div className="mt-14 grid items-start gap-x-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <div ref={setStage} className="min-w-0 lg:col-start-1 lg:row-start-1" />
+          {/* Stays in view beside the call list; if it's taller than the window, it scrolls by itself. */}
+          <aside className="mb-8 lg:sticky lg:top-6 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-[4.25rem] lg:mb-0 lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto lg:overscroll-contain lg:[scrollbar-width:thin]">
+            {tools}
+          </aside>
+          <div className="min-w-0 lg:col-start-1 lg:row-start-2">{trackList}</div>
+        </div>
       )}
-    </div>
+    </VideoStageContext.Provider>
   );
 }

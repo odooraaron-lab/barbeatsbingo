@@ -11,6 +11,8 @@ export type SyncState = {
   playing: boolean;
   /** The device the sound plays on, or null if none has played it yet. */
   sound: string | null;
+  /** True when the device with the sound is showing the video too (not just the sound). */
+  video?: boolean;
   /** Songs played, as set by hand; null follows the player. */
   played: number | null;
   /** The device that made the change. */

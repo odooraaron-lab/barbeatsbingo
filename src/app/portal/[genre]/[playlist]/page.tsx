@@ -42,6 +42,13 @@ export default async function ShowPage({ params }: { params: Promise<{ genre: st
   // Prefer the small MP3 preview: it starts far faster than streaming the video.
   const playable = findPlayable(allFiles);
   const showFile = files.find((f) => f.kind === "video" || f.kind === "audio") ?? null;
+  // The video can play here when its link streams (or can be relayed in pieces); a link that
+  // only sends the whole file couldn't skip the intro or keep in step, so it's sound only.
+  const video =
+    showFile?.kind === "video" &&
+    (showFile.source === "storage" || showFile.streamDirect !== false || showFile.byteRanges !== false)
+      ? { src: `/api/files/${showFile.id}/stream`, knownDuration: showFile.durationSeconds }
+      : null;
   const callList = trackList?.meta?.callList ?? null;
   const cards = files.find((f) => f.kind === "scorecards")?.meta?.cards ?? null;
   const player = playable && (
@@ -50,6 +57,7 @@ export default async function ShowPage({ params }: { params: Promise<{ genre: st
       title={(showFile ?? playable).title}
       skipSeconds={INTRO_SKIP_SECONDS}
       knownDuration={playable.durationSeconds}
+      video={user.canPlay ? video : null}
     />
   );
   // The checker needs the songs; it shows once they're known (from the server or the PDF itself).
@@ -99,7 +107,9 @@ export default async function ShowPage({ params }: { params: Promise<{ genre: st
                         <FileIcon kind={f.kind} />
                         <span className="text-sm font-semibold text-mist">{kindLabel(f.kind)}</span>
                       </div>
-                      <p className="mt-3 break-words text-[1.05rem] font-bold leading-snug sm:mt-4 sm:text-lg">{f.title}</p>
+                      <p className="mt-3 break-words text-[1.05rem] font-bold leading-snug sm:mt-4 sm:text-lg">
+                        {f.title}
+                      </p>
                       {meta.length > 0 && <p className="mt-1 text-sm text-mist">{meta.join(" · ")}</p>}
                       <FileDownloadedNote fileId={f.id} />
                       <div className="mt-auto flex gap-2 pt-4 sm:pt-5">
